@@ -29,7 +29,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
 
   const isTeacher = role === 'teacher';
 
-  const studentItems: { id: StudentTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+  const studentItems: { id: StudentTab; label: string; icon: React.FC<{ className?: string; style?: React.CSSProperties }> }[] = [
     { id: 'home', label: t('nav.home'), icon: Home },
     { id: 'workout', label: t('nav.workout'), icon: Dumbbell },
     { id: 'evolution', label: t('nav.evolution'), icon: TrendingUp },
@@ -37,7 +37,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
     { id: 'profile', label: t('nav.profile'), icon: User },
   ];
 
-  const teacherItems: { id: TeacherTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+  const teacherItems: { id: TeacherTab; label: string; icon: React.FC<{ className?: string; style?: React.CSSProperties }> }[] = [
     { id: 'dashboard', label: t('nav.home'), icon: Home },
     { id: 'students', label: t('nav.students'), icon: Users },
     { id: 'routines', label: t('nav.routines'), icon: ClipboardList },

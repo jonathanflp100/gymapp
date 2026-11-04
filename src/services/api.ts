@@ -18,6 +18,7 @@ import {
   MOCK_WEIGHT_RECORDS,
   MOCK_PERSONAL_RECORDS,
 } from '../data/mockData';
+import { localizeDemoData } from '../data/demoLocaleEs';
 import { aggregateMuscleStimulus, isNewPersonalRecord, calculateEpley1RM } from '../utils/rules';
 
 // Local storage keys to persist state across app interactions
@@ -99,7 +100,7 @@ export interface GymApiService {
   resetToMocks(): Promise<void>;
 }
 
-export const api: GymApiService = {
+const baseApi: GymApiService = {
   async getStudents(gymCode?: string): Promise<Student[]> {
     await delay();
     if (!gymCode) return [...studentsStore];
@@ -363,3 +364,26 @@ export const api: GymApiService = {
     }
   },
 };
+
+/**
+ * Demo: quando o idioma ativo é espanhol, devolve os dados de demonstração
+ * traduzidos. Ao trocar este arquivo pela API real, remova este wrapper.
+ */
+function isSpanishDemo(): boolean {
+  try {
+    return localStorage.getItem('gymapp_preferred_language') === 'es-PY';
+  } catch {
+    return false;
+  }
+}
+
+export const api: GymApiService = new Proxy(baseApi, {
+  get(target, prop, receiver) {
+    const value = Reflect.get(target, prop, receiver);
+    if (typeof value !== 'function') return value;
+    return async (...args: unknown[]) => {
+      const result = await value.apply(target, args);
+      return isSpanishDemo() ? localizeDemoData(result) : result;
+    };
+  },
+});

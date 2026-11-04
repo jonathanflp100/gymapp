@@ -25,7 +25,8 @@ interface DemoControlViewProps {
 export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClose }) => {
   const { brand, activePresetKey, setPreset, updateBrand, resetBrand } = useBrand();
   const { role, quickLoginAsStudent, quickLoginAsTeacher } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es-PY';
 
   const [customName, setCustomName] = useState(brand.name);
   const [customTagline, setCustomTagline] = useState(brand.tagline);
@@ -76,12 +77,12 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
 
   // Color Swatches for quick live demo
   const sampleColorPalettes = [
-    { name: 'Vermelho Fúria', hex: '#DC2626' },
-    { name: 'Azul Titânio', hex: '#2563EB' },
-    { name: 'Verde Neon / Bio', hex: '#059669' },
-    { name: 'Laranja Hardcore', hex: '#EA580C' },
-    { name: 'Dourado Gold', hex: '#D97706' },
-    { name: 'Roxo Dark', hex: '#7C3AED' },
+    { name: isEs ? 'Rojo Furia' : 'Vermelho Fúria', hex: '#DC2626' },
+    { name: isEs ? 'Azul Titanio' : 'Azul Titânio', hex: '#2563EB' },
+    { name: isEs ? 'Verde Neón' : 'Verde Neon / Bio', hex: '#059669' },
+    { name: isEs ? 'Naranja Hardcore' : 'Laranja Hardcore', hex: '#EA580C' },
+    { name: isEs ? 'Dorado Gold' : 'Dourado Gold', hex: '#D97706' },
+    { name: isEs ? 'Violeta Dark' : 'Roxo Dark', hex: '#7C3AED' },
   ];
 
   return (
@@ -188,7 +189,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
           <div>
             <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
               <Palette className="w-4 h-4 text-brand-primary" />
-              <span>Cores da Marca em Tempo Real</span>
+              <span>{isEs ? 'Colores de la Marca en Tiempo Real' : 'Cores da Marca em Tempo Real'}</span>
             </label>
 
             {/* Quick Swatches */}
@@ -225,7 +226,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
               />
               <div className="flex-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                  Cor Primária Hexadecimal
+                  {isEs ? 'Color Primario Hexadecimal' : 'Cor Primária Hexadecimal'}
                 </span>
                 <input
                   type="text"

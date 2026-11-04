@@ -14,7 +14,7 @@ interface HomeViewProps {
 export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateToTab }) => {
   const { currentUser } = useAuth();
   const { brand } = useBrand();
-  const { t, formatDate, formatWeight } = useLanguage();
+  const { t, language, formatDate, formatWeight } = useLanguage();
 
   const student = currentUser as Student;
 
@@ -54,7 +54,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
   const lastWorkout = recentHistory[0];
 
   // Days of week indicators (S T Q Q S S D / L M M J V S D)
-  const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const weekDays =
+    language === 'es-PY'
+      ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+      : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
   return (
     <div className="space-y-6 pb-28 animate-fadeIn">
@@ -201,7 +204,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
             )}
           </div>
           <span className="text-[10px] text-slate-500 mt-0.5 block">
-            {recentHistory.length} sessões registradas
+            {recentHistory.length} {language === 'es-PY' ? 'sesiones registradas' : 'sessões registradas'}
           </span>
         </div>
 

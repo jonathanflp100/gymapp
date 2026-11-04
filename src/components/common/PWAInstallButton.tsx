@@ -9,7 +9,8 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const PWAInstallButton: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es-PY';
   const { brand } = useBrand();
 
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -106,13 +107,21 @@ export const PWAInstallButton: React.FC = () => {
                   <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
                     1
                   </span>
-                  <span>Toque no botão <strong>Compartilhar</strong> (ícone do meio na barra do Safari).</span>
+                  {isEs ? (
+                    <span>Tocá el botón <strong>Compartir</strong> (ícono del medio en la barra de Safari).</span>
+                  ) : (
+                    <span>Toque no botão <strong>Compartilhar</strong> (ícone do meio na barra do Safari).</span>
+                  )}
                 </p>
                 <p className="flex items-start gap-2">
                   <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
                     2
                   </span>
-                  <span>Role para baixo e selecione <strong>Adicionar à Tela de Início</strong>.</span>
+                  {isEs ? (
+                    <span>Deslizá hacia abajo y elegí <strong>Agregar a inicio</strong>.</span>
+                  ) : (
+                    <span>Role para baixo e selecione <strong>Adicionar à Tela de Início</strong>.</span>
+                  )}
                 </p>
               </div>
 

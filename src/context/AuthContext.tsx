@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Student, Teacher, UserRole } from '../types';
 import { api } from '../services/api';
 import { useBrand } from './BrandContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface AuthContextType {
   currentUser: Student | Teacher | null;
@@ -21,6 +22,7 @@ const AUTH_ROLE_KEY = 'gymapp_auth_user_role';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { brand } = useBrand();
+  const { language } = useLanguage();
   const [currentUser, setCurrentUser] = useState<Student | Teacher | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     initAuth();
-  }, [brand.gymCode]);
+  }, [brand.gymCode, language]);
 
   const login = async (gymCode: string, email: string): Promise<{ success: boolean; error?: string }> => {
     const cleanCode = gymCode.trim().toUpperCase();

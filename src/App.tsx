@@ -20,6 +20,7 @@ import { Routine } from './types';
 function MainApp() {
   const { isAuthenticated, role } = useAuth();
   const { brand } = useBrand();
+  const { language } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [activeWorkoutRoutine, setActiveWorkoutRoutine] = useState<Routine | null>(null);
@@ -73,7 +74,7 @@ function MainApp() {
       <Header onOpenDemo={() => setIsDemoOpen(true)} />
 
       {/* Main View Area (Mobile-First constrained container) */}
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-4">
+      <main key={language} className="flex-1 max-w-md w-full mx-auto px-4 pt-4">
         {/* STUDENT VIEWS */}
         {role === 'student' && (
           <>

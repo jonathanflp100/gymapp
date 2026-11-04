@@ -459,7 +459,7 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
                         type="text"
                         value={re.notes || ''}
                         onChange={(e) => handleUpdateExerciseRow(idx, { notes: e.target.value })}
-                        placeholder="Observações técnicas (opcional)..."
+                        placeholder={language === 'es-PY' ? 'Observaciones técnicas (opcional)...' : 'Observações técnicas (opcional)...'}
                         className="w-full bg-slate-900/60 border border-slate-800 rounded-lg p-1.5 text-[11px] text-slate-300 placeholder-slate-600"
                       />
                     </div>

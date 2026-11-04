@@ -109,7 +109,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   const startWorkoutFromRoutine = (routine: Routine, catalog: Exercise[] = exercisesCatalog) => {
     const list: ActiveExerciseState[] = routine.exercises.map((re) => {
       const ex = catalog.find((e) => e.id === re.exerciseId);
-      const name = ex ? ex.name[language] || ex.name['pt-BR'] : 'Exercício';
+      const name = ex ? ex.name[language] || ex.name['pt-BR'] : language === 'es-PY' ? 'Ejercicio' : 'Exercício';
       const parsedReps = parseInt(re.reps) || 10;
       const targetWeight = re.targetWeightKg || re.previousWeightKg || 20;
 
@@ -319,7 +319,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                       Ficha {routine.category}
                     </span>
                     <span className="text-xs text-slate-400">
-                      {routine.exercises.length} exercícios
+                      {routine.exercises.length} {language === 'es-PY' ? 'ejercicios' : 'exercícios'}
                     </span>
                   </div>
 
