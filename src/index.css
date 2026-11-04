@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  --brand-primary: #DC2626;
+  --brand-primary-rgb: 220, 38, 38;
+  --brand-secondary: #111827;
+  --brand-secondary-rgb: 17, 24, 39;
+  --brand-accent: #EF4444;
+  --brand-text-on-primary: #FFFFFF;
+}
+
+/* Custom brand utility helpers */
+.bg-brand-primary {
+  background-color: var(--brand-primary);
+}
+
+.text-brand-primary {
+  color: var(--brand-primary);
+}
+
+.border-brand-primary {
+  border-color: var(--brand-primary);
+}
+
+.bg-brand-secondary {
+  background-color: var(--brand-secondary);
+}
+
+.text-brand-secondary {
+  color: var(--brand-secondary);
+}
+
+.border-brand-secondary {
+  border-color: var(--brand-secondary);
+}
+
+.bg-brand-primary-subtle {
+  background-color: rgba(var(--brand-primary-rgb), 0.12);
+}
+
+.border-brand-primary-subtle {
+  border-color: rgba(var(--brand-primary-rgb), 0.25);
+}
+
+.ring-brand-primary {
+  --tw-ring-color: var(--brand-primary);
+}
+
+/* Custom scrollbars and mobile ergonomics */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Prevent unwanted double-tap zoom on touch buttons */
+button, a, input, select {
+  touch-action: manipulation;
+}
+
+/* Safe area insets for mobile standalone navigation */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}

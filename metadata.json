@@ -1,0 +1,6 @@
+{
+  "name": "GymApp - White-Label Gym Platform",
+  "description": "Aplicativo white-label premium para academias, com suporte a múltiplos idiomas (pt-BR e es-PY), execução de treinos, mapas musculares e painel do professor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
