@@ -1,3 +1,5 @@
+import { useX } from '../../i18n/extraStrings';
+import { ExerciseGuideSheet } from '../../components/exercise/ExerciseGuideSheet';
 import React, { useState, useEffect } from 'react';
 import {
   Play,
@@ -10,6 +12,7 @@ import {
   Flag,
   RotateCcw,
   Sparkles,
+  PlayCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -50,6 +53,14 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
   initialRoutine,
   onFinishWorkoutSuccess,
 }) => {
+  const gx = useX();
+  const [guideExerciseId, setGuideExerciseId] = useState<string | null>(null);
+  const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
+  useEffect(() => {
+    if (!guideExerciseId) return setGuideExercise(null);
+    void api.getExerciseById(guideExerciseId).then(setGuideExercise);
+  }, [guideExerciseId]);
+
   const { currentUser } = useAuth();
   const { language, t, formatWeight } = useLanguage();
   const { brand } = useBrand();
@@ -397,9 +408,19 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
                     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                       {t('workout.exerciseIndex', { current: exIndex + 1, total: workoutExercises.length })}
                     </span>
-                    <h3 className="text-base font-extrabold text-white mt-0.5">
-                      {ex.exerciseName}
-                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setGuideExerciseId(ex.exerciseId)}
+                      className="text-left group"
+                    >
+                      <h3 className="text-base font-extrabold text-white mt-0.5 group-hover:text-brand-primary transition">
+                        {ex.exerciseName}
+                      </h3>
+                      <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-brand-primary">
+                        <PlayCircle className="w-3.5 h-3.5" />
+                        {gx.guide.open}
+                      </span>
+                    </button>
                   </div>
 
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 capitalize">
@@ -546,6 +567,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({
           </div>
         </div>
       )}
+      <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExerciseId(null)} />
     </div>
   );
 };

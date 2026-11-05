@@ -5,7 +5,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { api } from '../../services/api';
 import { WorkoutHistoryEntry, Student } from '../../types';
 
-export const HistoryView: React.FC = () => {
+export const HistoryView: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const { currentUser } = useAuth();
   const { t, formatDate, formatWeight } = useLanguage();
 
@@ -38,16 +38,18 @@ export const HistoryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 pb-28 animate-fadeIn">
+    <div className={`space-y-5 animate-fadeIn ${embedded ? '' : 'pb-28'}`}>
       {/* Title */}
-      <div>
-        <h2 className="text-xl font-black text-white tracking-tight">
-          {t('history.title')}
-        </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {t('history.subtitle')}
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h2 className="text-xl font-black text-white tracking-tight">
+            {t('history.title')}
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {t('history.subtitle')}
+          </p>
+        </div>
+      )}
 
       {historyList.length === 0 ? (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-xl">

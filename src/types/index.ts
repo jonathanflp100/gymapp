@@ -152,3 +152,45 @@ export interface MuscleFatigueScore {
   setsCount: number;
   intensity: 'none' | 'light' | 'moderate' | 'high';
 }
+
+// ---------------------------------------------------------------- Aulas coletivas e avaliação física
+
+export type Bilingual = { 'pt-BR': string; 'es-PY': string };
+
+export interface GroupClass {
+  id: string;
+  name: Bilingual;
+  description: Bilingual;
+  /** 0 = domingo ... 6 = sábado */
+  weekday: number;
+  time: string; // "18:30"
+  durationMin: number;
+  teacherId: string;
+  room: Bilingual;
+  capacity: number;
+  color: string;
+  intensity: 1 | 2 | 3;
+}
+
+export interface ClassBooking {
+  classId: string;
+  date: string; // AAAA-MM-DD
+  studentId: string;
+}
+
+export interface BodyAssessment {
+  id: string;
+  studentId: string;
+  teacherId: string;
+  date: string; // AAAA-MM-DD
+  weightKg: number;
+  bodyFatPct: number;
+  muscleMassKg: number;
+  waistCm: number;
+  hipCm: number;
+  chestCm: number;
+  armCm: number;
+  thighCm: number;
+  restingHr: number;
+  notes?: string;
+}

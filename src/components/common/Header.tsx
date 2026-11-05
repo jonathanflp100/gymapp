@@ -7,9 +7,10 @@ import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   onOpenDemo: () => void;
+  onOpenProfile?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenDemo }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenDemo, onOpenProfile }) => {
   const { brand, brandLogoUrl } = useBrand();
   const { currentUser, role } = useAuth();
   const { t } = useLanguage();
@@ -42,6 +43,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDemo }) => {
         {/* Action icons: PWA install + Demo preset tuner */}
         <div className="flex items-center gap-2 shrink-0">
           <PWAInstallButton />
+
+          {role === 'teacher' && onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              aria-label={t('nav.profile')}
+              className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-200 active:scale-95 transition"
+            >
+              <User className="w-4 h-4" />
+            </button>
+          )}
 
           <button
             type="button"

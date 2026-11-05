@@ -1,5 +1,6 @@
+import { ExerciseGuideSheet } from '../../components/exercise/ExerciseGuideSheet';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Dumbbell, Filter, X, Check, Save } from 'lucide-react';
+import { Search, Plus, Dumbbell, Filter, X, Check, Save, PlayCircle } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
 import { api } from '../../services/api';
@@ -13,6 +14,7 @@ export const ExerciseLibraryView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | 'all'>('all');
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [guide, setGuide] = useState<Exercise | null>(null);
 
   // New exercise form fields
   const [newPtName, setNewPtName] = useState('');
@@ -130,9 +132,11 @@ export const ExerciseLibraryView: React.FC = () => {
       {/* Exercise Cards List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {exercises.map((ex) => (
-          <div
+          <button
+            type="button"
             key={ex.id}
-            className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex items-center gap-3.5 hover:border-slate-700 transition"
+            onClick={() => setGuide(ex)}
+            className="text-left bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex items-center gap-3.5 hover:border-slate-700 active:scale-[0.99] transition"
           >
             {/* Visual Icon Badge */}
             <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-brand-primary shrink-0">
@@ -150,7 +154,8 @@ export const ExerciseLibraryView: React.FC = () => {
                 {t('teacher.defaultRestLabel', { sec: ex.defaultRestSeconds })}
               </span>
             </div>
-          </div>
+            <PlayCircle className="w-5 h-5 text-brand-primary shrink-0" />
+          </button>
         ))}
       </div>
 
@@ -258,6 +263,7 @@ export const ExerciseLibraryView: React.FC = () => {
           </div>
         </div>
       )}
+      <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} />
     </div>
   );
 };

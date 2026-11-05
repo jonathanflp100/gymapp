@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Flame, Calendar, Dumbbell, UserCheck, X, Eye, Phone } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Student, Routine } from '../../types';
+import { StudentDetailSheet } from './StudentDetailSheet';
 
 export const StudentsView: React.FC = () => {
   const { t, formatDate, formatWeight } = useLanguage();
-  const { quickLoginAsStudent } = useAuth();
 
   const [students, setStudents] = useState<Student[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -116,72 +115,11 @@ export const StudentsView: React.FC = () => {
         })}
       </div>
 
-      {/* Student Detail Modal */}
-      {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-fadeIn">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
-            <button
-              type="button"
-              onClick={() => setSelectedStudent(null)}
-              className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-brand-primary flex items-center justify-center font-black text-lg text-white">
-                {selectedStudent.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join('')}
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-white">{selectedStudent.name}</h3>
-                <p className="text-xs text-slate-400">{selectedStudent.email}</p>
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
-                  Matrícula: {selectedStudent.gymCode}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 my-4">
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500">Peso Atual</span>
-                <div className="text-base font-black text-white mt-0.5">
-                  {formatWeight(selectedStudent.currentWeightKg)}
-                </div>
-                <span className="text-[10px] text-slate-400">
-                  Meta: {formatWeight(selectedStudent.targetWeightKg)}
-                </span>
-              </div>
-
-              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500">Estatura</span>
-                <div className="text-base font-black text-white mt-0.5">
-                  {selectedStudent.heightCm} cm
-                </div>
-                <span className="text-[10px] text-slate-400">
-                  Entrou em: {formatDate(selectedStudent.joinDate)}
-                </span>
-              </div>
-            </div>
-
-            {/* Quick action to login as this student for demo */}
-            <button
-              type="button"
-              onClick={() => {
-                quickLoginAsStudent(selectedStudent.id);
-                setSelectedStudent(null);
-              }}
-              className="w-full mt-2 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition"
-            >
-              <Eye className="w-4 h-4 text-brand-primary" />
-              <span>Ver app como este aluno (Demo)</span>
-            </button>
-          </div>
-        </div>
-      )}
+      <StudentDetailSheet
+        student={selectedStudent}
+        onClose={() => setSelectedStudent(null)}
+        onChanged={async () => setRoutines(await api.getRoutines())}
+      />
     </div>
   );
 };

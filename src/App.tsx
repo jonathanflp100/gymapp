@@ -7,7 +7,7 @@ import { BottomNav, ActiveTab } from './components/common/BottomNav';
 import { HomeView } from './views/student/HomeView';
 import { WorkoutView } from './views/student/WorkoutView';
 import { EvolutionView } from './views/student/EvolutionView';
-import { HistoryView } from './views/student/HistoryView';
+import { ClassesView } from './views/shared/ClassesView';
 import { ProfileView } from './views/student/ProfileView';
 import { TeacherDashboard } from './views/teacher/TeacherDashboard';
 import { StudentsView } from './views/teacher/StudentsView';
@@ -74,7 +74,7 @@ function MainApp() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-brand-primary selection:text-white">
       {/* Top Header */}
-      <Header onOpenDemo={() => setIsDemoOpen(true)} />
+      <Header onOpenDemo={() => setIsDemoOpen(true)} onOpenProfile={() => setActiveTab('profile')} />
 
       {/* Main View Area (Mobile-First constrained container) */}
       <main key={language} className="flex-1 max-w-md w-full mx-auto px-4 pt-4">
@@ -93,8 +93,9 @@ function MainApp() {
                 onFinishWorkoutSuccess={handleFinishWorkoutSuccess}
               />
             )}
+            {activeTab === 'classes' && <ClassesView mode="student" />}
             {activeTab === 'evolution' && <EvolutionView />}
-            {activeTab === 'history' && <HistoryView />}
+            {activeTab === 'history' && <EvolutionView initialTab="history" />}
             {activeTab === 'profile' && <ProfileView />}
           </>
         )}
@@ -115,6 +116,7 @@ function MainApp() {
             {activeTab === 'routines' && (
               <RoutinesView initialCreateOpen={openCreateRoutineDirectly} />
             )}
+            {activeTab === 'classes' && <ClassesView mode="teacher" />}
             {activeTab === 'exercises' && <ExerciseLibraryView />}
             {activeTab === 'profile' && <ProfileView />}
           </>

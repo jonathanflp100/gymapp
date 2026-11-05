@@ -1,3 +1,4 @@
+import { NextClassCard } from '../../components/common/ClassWidgets';
 import React, { useState, useEffect } from 'react';
 import { Flame, Dumbbell, Clock, ArrowRight, Play, CheckCircle2, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -191,6 +192,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
           <p className="text-sm text-slate-400">{t('home.noRoutineAssigned')}</p>
         </div>
       )}
+
+      {/* Próxima aula coletiva */}
+      {student && <NextClassCard studentId={student.id} onOpen={() => onNavigateToTab('classes')} />}
 
       {/* 3. Quick Stats Grid */}
       <div className="grid grid-cols-2 gap-3">

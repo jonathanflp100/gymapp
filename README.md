@@ -88,6 +88,21 @@ Depois de criar a sua conta, coloque `INVITE_ONLY=1` no `.env` para só entrar q
 
 ## Demo de vendas
 
+### O que a demo mostra
+
+**Aluno:** treino do dia com sequência, execução do treino com timer e cargas anteriores,
+guia de cada exercício (vídeo, passo a passo, dica e erro comum), **aulas coletivas** com
+reserva de vaga, evolução de cargas e recordes, mapa muscular, **avaliação física** com
+gráfico de % de gordura e medidas, histórico e WhatsApp da academia.
+
+**Professor:** painel com alunos e aulas do dia, **ficha completa do aluno** (resumo,
+frequência semanal, fichas atribuídas, avaliação física, treinos), criação de fichas,
+**grade de aulas** com lotação, lista de presença e criação de aulas, e biblioteca de
+exercícios com guia de execução.
+
+> Aulas e avaliações ficam salvas no aparelho (dados de exemplo) nos dois modos. No modo
+> completo, só treinos, fichas e pesagens vão para o servidor openGym.
+
 ```bash
 npm install
 npm run dev

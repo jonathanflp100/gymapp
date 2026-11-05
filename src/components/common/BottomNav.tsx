@@ -3,7 +3,7 @@ import {
   Home,
   Dumbbell,
   TrendingUp,
-  History,
+  CalendarDays,
   User,
   Users,
   ClipboardList,
@@ -12,9 +12,10 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
+import { useX } from '../../i18n/extraStrings';
 
-export type StudentTab = 'home' | 'workout' | 'evolution' | 'history' | 'profile';
-export type TeacherTab = 'dashboard' | 'students' | 'routines' | 'exercises' | 'profile';
+export type StudentTab = 'home' | 'workout' | 'classes' | 'evolution' | 'history' | 'profile';
+export type TeacherTab = 'dashboard' | 'students' | 'routines' | 'classes' | 'exercises' | 'profile';
 export type ActiveTab = StudentTab | TeacherTab;
 
 interface BottomNavProps {
@@ -26,14 +27,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
   const { role } = useAuth();
   const { t } = useLanguage();
   const { brand } = useBrand();
+  const gx = useX();
 
   const isTeacher = role === 'teacher';
 
   const studentItems: { id: StudentTab; label: string; icon: React.FC<{ className?: string; style?: React.CSSProperties }> }[] = [
     { id: 'home', label: t('nav.home'), icon: Home },
     { id: 'workout', label: t('nav.workout'), icon: Dumbbell },
+    { id: 'classes', label: gx.nav.classes, icon: CalendarDays },
     { id: 'evolution', label: t('nav.evolution'), icon: TrendingUp },
-    { id: 'history', label: t('nav.history'), icon: History },
     { id: 'profile', label: t('nav.profile'), icon: User },
   ];
 
@@ -41,8 +43,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
     { id: 'dashboard', label: t('nav.home'), icon: Home },
     { id: 'students', label: t('nav.students'), icon: Users },
     { id: 'routines', label: t('nav.routines'), icon: ClipboardList },
-    { id: 'exercises', label: t('nav.exercises'), icon: Library },
-    { id: 'profile', label: t('nav.profile'), icon: User },
+    { id: 'classes', label: gx.nav.classes, icon: CalendarDays },
+    { id: 'exercises', label: gx.nav.library, icon: Library },
   ];
 
   const items = isTeacher ? teacherItems : studentItems;
@@ -52,7 +54,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
       <div className="max-w-md mx-auto flex items-center justify-around px-2 py-1.5">
         {items.map((item) => {
           const IconComponent = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = activeTab === item.id || (item.id === 'evolution' && activeTab === 'history');
 
           return (
             <button

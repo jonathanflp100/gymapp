@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Dumbbell, Scale, Flame } from 'lucide-react';
+import { Activity, Dumbbell, Scale, Flame, ClipboardCheck, History as HistoryIcon } from 'lucide-react';
+import { useX } from '../../i18n/extraStrings';
+import { AssessmentPanel } from '../../components/assessment/AssessmentPanel';
+import { HistoryView } from './HistoryView';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { api } from '../../services/api';
@@ -14,13 +17,14 @@ import {
 import { MuscleMap } from '../../components/muscle/MuscleMap';
 import { EvolutionCharts } from '../../components/charts/EvolutionCharts';
 
-export const EvolutionView: React.FC = () => {
+export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'assessment' | 'history' }> = ({ initialTab }) => {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
 
   const student = currentUser as Student;
 
-  const [activeTab, setActiveTab] = useState<'metrics' | 'muscles'>('metrics');
+  const gx = useX();
+  const [activeTab, setActiveTab] = useState<'metrics' | 'muscles' | 'assessment' | 'history'>(initialTab ?? 'metrics');
   const [weightHistory, setWeightHistory] = useState<WeightRecord[]>([]);
   const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -67,45 +71,41 @@ export const EvolutionView: React.FC = () => {
       </div>
 
       {/* View Switcher Tabs */}
-      <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
-        <button
-          type="button"
-          onClick={() => setActiveTab('metrics')}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-            activeTab === 'metrics'
-              ? 'bg-brand-primary text-white shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Scale className="w-3.5 h-3.5" />
-          <span>{t('evolution.tabWeight')} & PRs</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('muscles')}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-            activeTab === 'muscles'
-              ? 'bg-brand-primary text-white shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Activity className="w-3.5 h-3.5" />
-          <span>{t('evolution.tabMuscles')}</span>
-        </button>
+      <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800">
+        {(
+          [
+            ['metrics', gx.evo.progress, Scale],
+            ['muscles', gx.evo.muscles, Activity],
+            ['assessment', gx.evo.assessment, ClipboardCheck],
+            ['history', gx.evo.history, HistoryIcon],
+          ] as const
+        ).map(([id, label, Icon]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className={`py-2 px-1 rounded-xl text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 ${
+              activeTab === id ? 'bg-brand-primary text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            <span className="truncate max-w-full">{label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'metrics' ? (
+      {activeTab === 'metrics' && (
         <EvolutionCharts
           weightHistory={weightHistory}
           personalRecords={personalRecords}
           exercises={exercises}
           targetWeightKg={student?.targetWeightKg || 0}
         />
-      ) : (
-        stimulusData && <MuscleMap stimulusData={stimulusData} />
       )}
+      {activeTab === 'muscles' && stimulusData && <MuscleMap stimulusData={stimulusData} />}
+      {activeTab === 'assessment' && student && <AssessmentPanel studentId={student.id} />}
+      {activeTab === 'history' && <HistoryView embedded />}
     </div>
   );
 };
