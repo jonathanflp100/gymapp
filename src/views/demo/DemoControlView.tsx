@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useBrand } from '../../context/BrandContext';
 import { useAuth } from '../../context/AuthContext';
+import { REAL_BACKEND } from '../../services/openGymBackend';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { BRAND_PRESETS } from '../../config/brand';
 
@@ -288,7 +289,8 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          {/* 4. Quick User Role Switcher for Fast Demos */}
+          {/* 4. Quick User Role Switcher for Fast Demos (só na demo; no modo real o usuário é o da conta) */}
+          {!REAL_BACKEND && (
           <div>
             <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
               <User className="w-4 h-4 text-brand-primary" />
@@ -327,6 +329,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
               </button>
             </div>
           </div>
+          )}
 
           {/* Action buttons */}
           <div className="pt-2 flex items-center gap-2">

@@ -15,6 +15,9 @@ import { RoutinesView } from './views/teacher/RoutinesView';
 import { ExerciseLibraryView } from './views/teacher/ExerciseLibraryView';
 import { DemoControlView } from './views/demo/DemoControlView';
 import { LoginView } from './views/auth/LoginView';
+import { RealAuthView } from './views/auth/RealAuthView';
+import { DEFAULT_BRAND } from './config/brand';
+import { REAL_BACKEND } from './services/openGymBackend';
 import { Routine } from './types';
 
 function MainApp() {
@@ -50,7 +53,7 @@ function MainApp() {
   if (!isAuthenticated) {
     return (
       <>
-        <LoginView />
+        {REAL_BACKEND ? <RealAuthView /> : <LoginView />}
         <DemoControlView isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
       </>
     );
@@ -135,7 +138,7 @@ function MainApp() {
 
 export default function App() {
   return (
-    <LanguageProvider defaultLang="pt-BR">
+    <LanguageProvider defaultLang={DEFAULT_BRAND.defaultLanguage}>
       <BrandProvider>
         <AuthProvider>
           <MainApp />

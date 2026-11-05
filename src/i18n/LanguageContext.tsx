@@ -80,7 +80,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode; defaultLang
 
   const formatDate = (dateInput: string | Date, options?: Intl.DateTimeFormatOptions): string => {
     try {
-      const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+      // "2026-11-05" (só a data) é lida no fuso local, para não aparecer como o dia anterior.
+      const date =
+        typeof dateInput === 'string'
+          ? /^\d{4}-\d{2}-\d{2}$/.test(dateInput)
+            ? new Date(`${dateInput}T12:00:00`)
+            : new Date(dateInput)
+          : dateInput;
       const locale = language === 'pt-BR' ? 'pt-BR' : 'es-PY';
       return new Intl.DateTimeFormat(locale, options || { day: '2-digit', month: 'short' }).format(date);
     } catch {

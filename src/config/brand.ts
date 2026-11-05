@@ -31,7 +31,9 @@ export const BRAND_PRESETS: Record<'forcaTotal' | 'titan', BrandConfig> = {
   },
 };
 
-export const DEFAULT_BRAND: BrandConfig = BRAND_PRESETS.forcaTotal;
+// Marca padrão da instalação: VITE_BRAND=titan (Paraguai) ou forcaTotal (Brasil, padrão).
+const envBrand = import.meta.env.VITE_BRAND as keyof typeof BRAND_PRESETS | undefined;
+export const DEFAULT_BRAND: BrandConfig = (envBrand && BRAND_PRESETS[envBrand]) || BRAND_PRESETS.forcaTotal;
 
 /**
  * Converts hex color code to RGB triplet for rgba() CSS utilities

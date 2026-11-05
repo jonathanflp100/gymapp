@@ -3,6 +3,7 @@ import { Student, Teacher, UserRole } from '../types';
 import { api } from '../services/api';
 import { useBrand } from './BrandContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { REAL_BACKEND, openGymAuth, setRealGymCode } from '../services/openGymBackend';
 
 interface AuthContextType {
   currentUser: Student | Teacher | null;
@@ -12,6 +13,8 @@ interface AuthContextType {
   quickLoginAsStudent: (studentId?: string) => Promise<void>;
   quickLoginAsTeacher: (teacherId?: string) => Promise<void>;
   logout: () => void;
+  realSignIn: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  realRegister: (name: string, password: string, email?: string, code?: string) => Promise<{ success: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
 }
 
@@ -30,6 +33,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Restore session or bootstrap default demo student
   useEffect(() => {
     async function initAuth() {
+      if (REAL_BACKEND) {
+        try {
+          await loadRealUser();
+        } catch (err) {
+          console.error('Falha ao conectar no servidor:', err);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
       try {
         const savedId = localStorage.getItem(AUTH_USER_KEY);
         const savedRole = localStorage.getItem(AUTH_ROLE_KEY) as UserRole | null;
@@ -143,7 +156,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  async function loadRealUser(): Promise<boolean> {
+    const user = await openGymAuth.currentUser();
+    if (!user) {
+      setCurrentUser(null);
+      setRole(null);
+      return false;
+    }
+    setRealGymCode(brand.gymCode);
+    await openGymAuth.seedIfEmpty(language);
+    const student = await api.getStudentById(user.id);
+    setCurrentUser(student);
+    setRole('student');
+    return true;
+  }
+
+  const realSignIn = async (identifier: string, password: string) => {
+    const res = await openGymAuth.login(identifier.trim(), password);
+    if (!res.ok) return { success: false, error: res.error };
+    await loadRealUser();
+    return { success: true };
+  };
+
+  const realRegister = async (name: string, password: string, email?: string, code?: string) => {
+    const res = await openGymAuth.register(name.trim(), password, email?.trim() || undefined, code?.trim() || undefined);
+    if (!res.ok) return { success: false, error: res.error };
+    await loadRealUser();
+    return { success: true };
+  };
+
   const logout = () => {
+    if (REAL_BACKEND) void openGymAuth.logout();
     setCurrentUser(null);
     setRole(null);
     localStorage.removeItem(AUTH_USER_KEY);
@@ -172,6 +215,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         quickLoginAsTeacher,
         logout,
         refreshUser,
+        realSignIn,
+        realRegister,
       }}
     >
       {!isLoading && children}

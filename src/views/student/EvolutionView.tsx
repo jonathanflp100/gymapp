@@ -101,7 +101,7 @@ export const EvolutionView: React.FC = () => {
           weightHistory={weightHistory}
           personalRecords={personalRecords}
           exercises={exercises}
-          targetWeightKg={student?.targetWeightKg || 80}
+          targetWeightKg={student?.targetWeightKg || 0}
         />
       ) : (
         stimulusData && <MuscleMap stimulusData={stimulusData} />

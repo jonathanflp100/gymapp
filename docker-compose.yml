@@ -1,0 +1,37 @@
+# GymApp (app com a marca da academia) + openGym (servidor de dados).
+# Subir:  docker compose up -d --build     Abrir: http://localhost:8080
+name: gymapp
+
+services:
+  # Servidor openGym: contas, senhas e os dados de treino de cada aluno.
+  api:
+    # Compilado direto do código oficial do openGym, versão fixa v1.4.4.
+    build: https://github.com/DuarteSantos8/openGym.git#v1.4.4:api
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+      - TRUST_PROXY=1
+      # Endereço exato que aparece no navegador. Mude ao instalar num domínio (https://app.academia.com).
+      - ORIGIN=${ORIGIN:-http://localhost:8080}
+      - RP_ID=${RP_ID:-localhost}
+      # Login com nome/e-mail e senha (o GymApp usa isso).
+      - PASSWORD_LOGIN=1
+      - ALLOW_GUEST=0
+      # Depois de criar sua conta, mude para 1 para só entrar quem tiver convite.
+      - INVITE_ONLY=${INVITE_ONLY:-0}
+    volumes:
+      - ./data:/data   # FAÇA BACKUP DESTA PASTA: contas e treinos dos alunos
+
+  # App do aluno com a marca da academia, servindo /api do mesmo endereço.
+  web:
+    build:
+      context: .
+      args:
+        # titan = Gimnasio Titán (Paraguai, espanhol) | forcaTotal = Força Total (Brasil)
+        VITE_BRAND: ${BRAND:-forcaTotal}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"

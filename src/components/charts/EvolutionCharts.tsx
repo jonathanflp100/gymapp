@@ -46,10 +46,12 @@ export const EvolutionCharts: React.FC<EvolutionChartsProps> = ({
               <span>{t('evolution.weightHistoryTitle')}</span>
             </h3>
             <div className="flex items-center gap-3 mt-1">
-              <span className="text-2xl font-black text-white">{formatWeight(currentWeight)}</span>
-              <span className="text-xs text-slate-400">
-                {t('evolution.targetWeight')}: {formatWeight(targetWeightKg)}
-              </span>
+              <span className="text-2xl font-black text-white">{weightHistory.length ? formatWeight(currentWeight) : '—'}</span>
+              {targetWeightKg > 0 && (
+                <span className="text-xs text-slate-400">
+                  {t('evolution.targetWeight')}: {formatWeight(targetWeightKg)}
+                </span>
+              )}
             </div>
           </div>
 

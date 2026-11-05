@@ -19,6 +19,7 @@ import {
   MOCK_PERSONAL_RECORDS,
 } from '../data/mockData';
 import { localizeDemoData } from '../data/demoLocaleEs';
+import { REAL_BACKEND, openGymApi } from './openGymBackend';
 import { aggregateMuscleStimulus, isNewPersonalRecord, calculateEpley1RM } from '../utils/rules';
 
 // Local storage keys to persist state across app interactions
@@ -377,7 +378,7 @@ function isSpanishDemo(): boolean {
   }
 }
 
-export const api: GymApiService = new Proxy(baseApi, {
+const demoApi: GymApiService = new Proxy(baseApi, {
   get(target, prop, receiver) {
     const value = Reflect.get(target, prop, receiver);
     if (typeof value !== 'function') return value;
@@ -387,3 +388,6 @@ export const api: GymApiService = new Proxy(baseApi, {
     };
   },
 });
+
+/** Modo real (VITE_BACKEND=opengym) usa o servidor openGym; senão, a demo com dados de exemplo. */
+export const api: GymApiService = REAL_BACKEND ? openGymApi : demoApi;
