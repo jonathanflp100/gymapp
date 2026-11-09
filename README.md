@@ -8,7 +8,10 @@ Português (Brasil) e espanhol (Paraguai).
 **Aluno**
 - Treino do dia, sequência de dias, execução com timer de descanso e cargas anteriores
 - Fichas montadas pelo professor (chegam sozinhas no app)
-- Guia de cada exercício: passo a passo, dica, erro comum e espaço para o vídeo da academia
+- Biblioteca com **mais de 5.600 exercícios** (pt-BR e espanhol), cada um com animação de cadência e passo a passo
+- Guia de cada exercício: passo a passo, dica, erro comum e animação própria do movimento
+- Check-in pelo **QR code da recepção** (o código muda todo dia), mural de avisos e desafios do mês
+- Registro de peso e meta pelo próprio aluno; lembretes (aula de hoje, dias sem treinar, desafio quase completo)
 - Aulas coletivas: grade da semana, reserva e cancelamento, vagas restantes
 - Evolução: cargas, recordes, mapa muscular, histórico
 - Avaliação física: peso, % de gordura, massa magra, medidas, gráfico de evolução
@@ -19,7 +22,10 @@ Português (Brasil) e espanhol (Paraguai).
 - Ficha completa do aluno: frequência, fichas, avaliações e treinos
 - Criar fichas e atribuir a um ou vários alunos
 - Grade de aulas: criar, excluir, lotação e lista de presença
+- **Equipamentos da academia**: o dono marca o que a academia tem (barras, halteres, polia, aparelhos, smith, kettlebell, TRX...) e oculta exercícios; a biblioteca e a montagem de fichas mostram só o que dá para fazer lá (com opção de abrir o catálogo completo)
 - Registrar avaliações físicas
+- Engajamento: publicar avisos, criar desafios com prêmio, ver quem concluiu, presença do dia e dos últimos 7 dias
+- **Modo recepção**: QR do check-in em tela cheia para TV ou tablet, com contador ao vivo
 
 **Administrador (dono)**
 - Tela de configurações: logo, cores, nome, slogan, WhatsApp, endereço, idioma, com prévia ao vivo
@@ -114,6 +120,8 @@ No PowerShell, use `$env:NOME="valor";` antes de cada comando.
 - `src/services/openGymBackend.ts`: contas e treinos (openGym), ciente do papel do usuário
 - `src/services/hub.ts` e `src/services/extrasApi.ts`: servidor da academia (aulas, avaliações, equipe)
 - `src/views/teacher/SettingsView.tsx`: configurações da academia
+- `src/views/teacher/EngagementView.tsx` e `src/components/engagement/`: avisos, desafios, check-in, peso e lembretes
+- `src/services/catalogue.ts` e `public/catalogo/`: biblioteca de exercícios carregada sob demanda
 - `server/hub/`: servidor da academia + Dockerfile
 - `deploy/nginx.conf`: rotas `/api/hub` → hub, `/api` → openGym
 - `deploy/saas/`: Caddy, modelo por academia e scripts
@@ -123,3 +131,7 @@ No PowerShell, use `$env:NOME="valor";` antes de cada comando.
 O openGym é AGPL-3.0 (https://github.com/DuarteSantos8/openGym) e é usado sem modificações.
 As imagens e animações de exercício do openGym pertencem ao Gym Visual e **não** são usadas
 (`EXERCISE_MEDIA=off`); para usá-las comercialmente é preciso licença própria em gymvisual.com.
+
+Os textos do catálogo de exercícios (nomes e passo a passo) vêm do catálogo do openGym e ficam
+separados do código, como dados, em `public/catalogo/` (veja `public/catalogo/LICENCA.txt`).
+Para regenerar: `node scripts/build-catalogue.mjs <pasta openGym>/catalogue`.

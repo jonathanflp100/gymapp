@@ -22,6 +22,7 @@ import {
 import { MOCK_EXERCISES, MOCK_ROUTINES } from '../data/mockData';
 import { toAppId, toCatalogueId } from '../data/catalogueMap';
 import { localizeDemoData } from '../data/demoLocaleEs';
+import { searchExercises, loadCatalogue, getCatalogueExercise, isCatalogueId } from './catalogue';
 import { aggregateMuscleStimulus, calculateEpley1RM, calculateStreak } from '../utils/rules';
 import type { GymApiService } from './api';
 import { hub, HubMember } from './hub';
@@ -188,6 +189,8 @@ export const openGymAuth = {
 // ---------------------------------------------------------------- conversões
 
 const exerciseById = new Map(MOCK_EXERCISES.map((e) => [e.id, e]));
+/** Exercício curado ou do catálogo completo (o catálogo precisa estar carregado). */
+const lookup = (id: string) => exerciseById.get(id) ?? getCatalogueExercise(id) ?? undefined;
 /** Dia local (AAAA-MM-DD). toISOString usaria UTC e viraria o dia às 21h no Brasil. */
 const localDay = (t: number | Date = new Date()) => {
   const d = new Date(t);
@@ -246,14 +249,14 @@ function routineFromOg(r: OgRoutine, s: OgState, studentId: string): Routine {
       sets: e.sets ?? 3,
       reps: e.repsMax ? `${e.reps}-${e.repsMax}` : String(e.reps ?? 10),
       targetWeightKg: e.weight ?? 0,
-      restSeconds: e.restSec ?? exerciseById.get(appId)?.defaultRestSeconds ?? 90,
+      restSeconds: e.restSec ?? lookup(appId)?.defaultRestSeconds ?? 90,
       notes: e.note,
       previousWeightKg: lastWeightFor(s, e.id),
     };
   });
   const muscles =
     r.gx?.muscles ??
-    Array.from(new Set(exercises.map((e) => exerciseById.get(e.exerciseId)?.muscleGroup).filter(Boolean))) as MuscleGroup[];
+    Array.from(new Set(exercises.map((e) => lookup(e.exerciseId)?.muscleGroup).filter(Boolean))) as MuscleGroup[];
   return {
     id: r.id,
     name: r.name,
@@ -268,7 +271,7 @@ function routineFromOg(r: OgRoutine, s: OgState, studentId: string): Routine {
 }
 
 function exerciseName(appId: string, lang: string): string {
-  const ex = exerciseById.get(appId);
+  const ex = lookup(appId);
   if (!ex) return lang === 'es-PY' ? `Ejercicio ${appId}` : `Exercício ${appId}`;
   return lang === 'es-PY' ? ex.name['es-PY'] : ex.name['pt-BR'];
 }
@@ -290,7 +293,7 @@ function workoutFromOg(w: OgWorkout, studentId: string, lang: string): WorkoutHi
   const completedSets = exercises.flatMap((e) => e.sets.filter((x) => x.completed));
   const volume = w.vol ?? completedSets.reduce((acc, x) => acc + x.weightKg * x.reps, 0);
   const muscles = Array.from(
-    new Set(exercises.map((e) => exerciseById.get(e.exerciseId)?.muscleGroup).filter(Boolean))
+    new Set(exercises.map((e) => lookup(e.exerciseId)?.muscleGroup).filter(Boolean))
   ) as MuscleGroup[];
   const start = w.start ?? Date.parse(w.d);
   const end = w.end ?? start;
@@ -506,21 +509,13 @@ export const openGymApi: GymApiService = {
   },
 
   async getExercises(filter) {
-    let result = [...MOCK_EXERCISES];
-    if (filter?.muscleGroup) {
-      result = result.filter(
-        (ex) => ex.muscleGroup === filter.muscleGroup || ex.secondaryMuscleGroups?.includes(filter.muscleGroup!)
-      );
-    }
-    if (filter?.query) {
-      const q = filter.query.toLowerCase().trim();
-      result = result.filter(
-        (ex) => ex.name['pt-BR'].toLowerCase().includes(q) || ex.name['es-PY'].toLowerCase().includes(q)
-      );
-    }
-    return result;
+    return searchExercises(MOCK_EXERCISES, filter);
   },
   async getExerciseById(id) {
+    if (isCatalogueId(id)) {
+      await loadCatalogue();
+      return getCatalogueExercise(id);
+    }
     return exerciseById.get(id) ?? null;
   },
   async createExercise(data): Promise<Exercise> {
@@ -531,6 +526,7 @@ export const openGymApi: GymApiService = {
   },
 
   async getWorkoutHistory(studentId) {
+    await loadCatalogue();
     if (!isMe(studentId)) return staff() ? hub.activity(studentId) : [];
     const s = await state();
     const lang = currentLang();

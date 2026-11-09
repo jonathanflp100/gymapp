@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { getCatalogueSteps, isCatalogueId } from '../../services/catalogue';
+import { MovementAnimation, patternFor } from './MovementAnimation';
 import { Play, Pause, Lightbulb, AlertTriangle, Timer, Dumbbell } from 'lucide-react';
 import { Exercise } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -14,6 +16,19 @@ export const ExerciseGuideSheet: React.FC<{ exercise: Exercise | null; onClose: 
   const es = language === 'es-PY';
   const guide = exercise ? EXERCISE_GUIDES[exercise.id] : undefined;
   const fallbackInstr = exercise?.instructions?.[es ? 'es-PY' : 'pt-BR'];
+  const [catalogueSteps, setCatalogueSteps] = useState<string[]>([]);
+
+  // Exercícios do catálogo completo: passo a passo carregado sob demanda
+  useEffect(() => {
+    setCatalogueSteps([]);
+    if (!exercise || guide || !isCatalogueId(exercise.id)) return;
+    let alive = true;
+    getCatalogueSteps(exercise.id, language === 'es-PY' ? 'es-PY' : 'pt-BR').then((steps) => alive && setCatalogueSteps(steps));
+    return () => {
+      alive = false;
+    };
+  }, [exercise, guide, language]);
+  const steps = guide ? (es ? guide.steps.es : guide.steps.pt) : catalogueSteps;
 
   return (
     <Sheet
@@ -47,9 +62,9 @@ export const ExerciseGuideSheet: React.FC<{ exercise: Exercise | null; onClose: 
 
           <div>
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2">{x.guide.howTo}</h4>
-            {guide ? (
+            {steps.length ? (
               <ol className="space-y-2">
-                {(es ? guide.steps.es : guide.steps.pt).map((s, i) => (
+                {steps.map((s, i) => (
                   <li key={i} className="flex gap-3 text-xs text-slate-200 leading-relaxed">
                     <span className="w-6 h-6 shrink-0 rounded-lg bg-brand-primary text-white font-black text-[11px] flex items-center justify-center">
                       {i + 1}
@@ -108,11 +123,8 @@ const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
   const [playing, setPlaying] = useState(true);
   const [reps, setReps] = useState(0);
 
-  useEffect(() => {
-    if (!playing) return;
-    const id = setInterval(() => setReps((r) => r + 1), 3000);
-    return () => clearInterval(id);
-  }, [playing]);
+  const countRep = useCallback(() => setReps((r) => r + 1), []);
+  const isHold = (exercise.pattern ?? patternFor(exercise.id, exercise.muscleGroup)) === 'plank';
 
   if (url) {
     return <video src={url} controls playsInline className="w-full aspect-video rounded-2xl bg-black" />;
@@ -124,22 +136,15 @@ const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
       style={{ background: `linear-gradient(135deg, ${brand.primaryColor}, ${brand.secondaryColor || '#0f172a'})` }}
     >
       <div className="absolute inset-0 bg-slate-950/45" />
-      <style>{`
-        @keyframes gx-rep { 0%,100% { transform: translateY(-26px); } 66% { transform: translateY(26px); } }
-        @keyframes gx-arm { 0%,100% { height: 54px; } 66% { height: 18px; } }
-      `}</style>
-
-      <div className="absolute inset-0 flex items-center justify-center">
-        <svg viewBox="0 0 200 120" className="w-3/4 h-3/4" aria-hidden="true">
-          <g style={{ animation: playing ? 'gx-rep 3s ease-in-out infinite' : undefined, transformOrigin: 'center' }}>
-            <rect x="30" y="56" width="140" height="6" rx="3" fill="white" opacity="0.95" />
-            <rect x="22" y="44" width="12" height="30" rx="3" fill="white" />
-            <rect x="166" y="44" width="12" height="30" rx="3" fill="white" />
-            <rect x="12" y="48" width="9" height="22" rx="2" fill="white" opacity="0.8" />
-            <rect x="179" y="48" width="9" height="22" rx="2" fill="white" opacity="0.8" />
-          </g>
-          <line x1="20" y1="112" x2="180" y2="112" stroke="white" strokeOpacity="0.25" strokeDasharray="4 6" />
-        </svg>
+      <div className="absolute inset-x-0 top-6 bottom-6 flex items-center justify-center">
+        <MovementAnimation
+          exerciseId={exercise.id}
+          muscleGroup={exercise.muscleGroup}
+          patternOverride={exercise.pattern}
+          playing={playing}
+          accent={brand.primaryColor}
+          onRep={countRep}
+        />
       </div>
 
       <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -148,7 +153,7 @@ const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
           {x.guide.video}
         </span>
       </div>
-      {playing && (
+      {!isHold && (
         <div className="absolute top-3 right-3 text-[11px] font-black px-2 py-1 rounded-lg bg-black/40 text-white tabular-nums">
           {reps} reps
         </div>
@@ -166,7 +171,7 @@ const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
       </button>
 
       <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent">
-        <div className="text-[11px] font-bold text-white">{x.guide.tempo}</div>
+        <div className="text-[11px] font-bold text-white">{isHold ? x.guide.hold : x.guide.tempo}</div>
       </div>
     </div>
   );

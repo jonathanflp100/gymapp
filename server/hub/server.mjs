@@ -29,7 +29,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // ---------------------------------------------------------------- armazenamento
 
-const COLLECTIONS = ['settings', 'members', 'routines', 'classes', 'bookings', 'assessments', 'activity'];
+const COLLECTIONS = ['settings', 'members', 'routines', 'classes', 'bookings', 'assessments', 'activity', 'announcements', 'checkins', 'challenges', 'secret', 'inventory'];
 
 const defaults = {
   settings: () => ({
@@ -53,6 +53,12 @@ const defaults = {
   bookings: () => [],
   assessments: () => [],
   activity: () => [],
+  announcements: () => [],
+  checkins: () => [],
+  challenges: () => [],
+  secret: () => ({ key: crypto.randomBytes(32).toString('hex') }),
+  // Equipamentos que a academia tem (null = mostrar o catálogo inteiro) e exercícios ocultos
+  inventory: () => ({ kits: null, hidden: [] }),
 };
 
 const db = {};
@@ -66,6 +72,8 @@ for (const name of COLLECTIONS) {
 }
 
 const dirty = new Set();
+// a chave do check-in é criada uma vez e guardada
+if (!fs.existsSync(path.join(DATA_DIR, 'secret.json'))) setTimeout(() => save('secret'), 0);
 let flushTimer = null;
 function save(name) {
   dirty.add(name);
@@ -647,10 +655,178 @@ route('GET', '/api/hub/stats', ({ member }) => {
       .sort((a, b) => (a.lastWorkoutAt || '').localeCompare(b.lastWorkoutAt || ''))
       .slice(0, 30),
     workouts7: db.activity.filter((a) => Date.parse(a.completedAt) >= week).length,
+    checkinsToday: db.checkins.filter((c) => c.date === localDay()).length,
     classesToday: today.length,
     bookedToday: today.reduce((n, o) => n + o.booked, 0),
     capacityToday: today.reduce((n, o) => n + o.cls.capacity, 0),
   };
+});
+
+
+// ---------------------------------------------------------------- mural de avisos
+
+route('GET', '/api/hub/announcements', () => {
+  const now = new Date().toISOString();
+  return db.announcements
+    .filter((a) => !a.expiresAt || a.expiresAt >= now.slice(0, 10))
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 30);
+});
+route('POST', '/api/hub/announcements', ({ member, body }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Só a equipe publica avisos');
+  const title = str(body.title, 80);
+  if (!title) throw new HttpError(400, 'Escreva o título do aviso');
+  const a = {
+    id: id('av'),
+    title,
+    body: str(body.body, 600) || '',
+    kind: ['info', 'promo', 'alert'].includes(body.kind) ? body.kind : 'info',
+    pinned: !!body.pinned,
+    expiresAt: isDay(body.expiresAt) ? body.expiresAt : null,
+    authorName: member.name,
+    createdAt: new Date().toISOString(),
+  };
+  db.announcements.unshift(a);
+  save('announcements');
+  return a;
+});
+route('DELETE', '/api/hub/announcements/:id', ({ member, params }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Só a equipe apaga avisos');
+  db.announcements = db.announcements.filter((a) => a.id !== params.id);
+  save('announcements');
+  return { ok: true };
+});
+
+// ---------------------------------------------------------------- check-in por QR code
+
+/** Código do dia (muda à meia-noite). Quem não está na academia não tem como saber. */
+function checkinCode(day = localDay()) {
+  return crypto.createHmac('sha256', db.secret.key).update(`checkin:${day}`).digest('base64url').slice(0, 10);
+}
+
+route('GET', '/api/hub/checkin/code', ({ member }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Só a equipe abre o modo recepção');
+  const today = localDay();
+  return { code: checkinCode(today), date: today, count: db.checkins.filter((c) => c.date === today).length };
+});
+route('POST', '/api/hub/checkin', ({ member, body }) => {
+  const today = localDay();
+  const given = Buffer.from(String(body.code || ''));
+  const expected = Buffer.from(checkinCode(today));
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected))
+    throw new HttpError(400, 'QR code inválido ou de outro dia. Leia o QR da recepção de novo.');
+  if (member.status === 'inactive') throw new HttpError(403, 'Matrícula inativa. Fale com a recepção.');
+  const already = db.checkins.find((c) => c.studentId === member.id && c.date === today);
+  if (already) return { ok: true, already: true, at: already.at };
+  const c = { studentId: member.id, date: today, at: new Date().toISOString() };
+  db.checkins.push(c);
+  save('checkins');
+  return { ok: true, already: false, at: c.at };
+});
+route('GET', '/api/hub/checkins', ({ member, query }) => {
+  const studentId = query.get('studentId') || member.id;
+  if (!isStaff(member) && studentId !== member.id) throw new HttpError(403, 'Sem acesso');
+  return db.checkins
+    .filter((c) => c.studentId === studentId)
+    .map((c) => ({ date: c.date, at: c.at }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 400);
+});
+route('GET', '/api/hub/checkins/stats', ({ member }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Sem acesso');
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = localDay(Date.now() - i * 86_400_000);
+    days.push({ date: d, count: db.checkins.filter((c) => c.date === d).length });
+  }
+  const today = localDay();
+  return {
+    days,
+    today: db.checkins
+      .filter((c) => c.date === today)
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .map((c) => ({ id: c.studentId, name: db.members[c.studentId]?.name || '—', at: c.at })),
+  };
+});
+
+// ---------------------------------------------------------------- desafios do mês
+
+const monthOf = (iso) => String(iso).slice(0, 7);
+
+function challengeProgress(ch, studentId) {
+  if (ch.metric === 'checkins') return db.checkins.filter((c) => c.studentId === studentId && monthOf(c.date) === ch.month).length;
+  if (ch.metric === 'classes')
+    return db.bookings.filter(
+      (b) => b.studentId === studentId && monthOf(b.date) === ch.month && b.date <= localDay()
+    ).length;
+  // treinos: dias diferentes com treino registrado
+  return new Set(
+    db.activity.filter((a) => a.studentId === studentId && monthOf(localDay(Date.parse(a.completedAt))) === ch.month)
+      .map((a) => localDay(Date.parse(a.completedAt)))
+  ).size;
+}
+
+// ------------------------------------------------------------------ Equipamentos da academia
+
+const KITS = ['barbell', 'smith', 'dumbbell', 'kettlebell', 'cable', 'machine', 'band', 'suspension', 'ball', 'plate', 'cardio', 'mobility', 'bodyweight', 'other'];
+route('GET', '/api/hub/inventory', ({ member }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Sem acesso');
+  return db.inventory;
+});
+route('PUT', '/api/hub/inventory', ({ member, body }) => {
+  if (member.role !== 'owner') throw new HttpError(403, 'Só o administrador muda os equipamentos');
+  const inv = { ...db.inventory };
+  if (body.kits === null) inv.kits = null;
+  else if (Array.isArray(body.kits)) inv.kits = [...new Set(body.kits.filter((k) => KITS.includes(k)))];
+  if (Array.isArray(body.hidden)) {
+    inv.hidden = [...new Set(body.hidden.filter((h) => typeof h === 'string' && h.length <= 40))].slice(0, 8000);
+  }
+  db.inventory = inv;
+  save('inventory');
+  return inv;
+});
+
+route('GET', '/api/hub/challenges', ({ member }) => {
+  const month = localDay().slice(0, 7);
+  const students = Object.values(db.members).filter((m) => m.role === 'student');
+  return db.challenges
+    .filter((c) => c.month >= month)
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map((c) => {
+      const progress = challengeProgress(c, member.id);
+      const out = { ...c, progress: Math.min(progress, c.target), done: progress >= c.target };
+      if (isStaff(member)) {
+        const done = students.filter((s) => challengeProgress(c, s.id) >= c.target);
+        out.completedBy = done.map((s) => ({ id: s.id, name: s.name }));
+        out.participants = students.filter((s) => challengeProgress(c, s.id) > 0).length;
+      }
+      return out;
+    });
+});
+route('POST', '/api/hub/challenges', ({ member, body }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Só a equipe cria desafios');
+  const ptTitle = str(body.title?.['pt-BR'], 60);
+  if (!ptTitle) throw new HttpError(400, 'Dê um nome ao desafio');
+  const target = Math.round(num(body.target, 1, 31) ?? 0);
+  if (!target) throw new HttpError(400, 'Defina a meta');
+  const c = {
+    id: id('ds'),
+    title: { 'pt-BR': ptTitle, 'es-PY': str(body.title?.['es-PY'], 60) || ptTitle },
+    reward: { 'pt-BR': str(body.reward?.['pt-BR'], 80) || '', 'es-PY': str(body.reward?.['es-PY'], 80) || str(body.reward?.['pt-BR'], 80) || '' },
+    metric: ['workouts', 'checkins', 'classes'].includes(body.metric) ? body.metric : 'workouts',
+    target,
+    month: /^\d{4}-\d{2}$/.test(body.month) ? body.month : localDay().slice(0, 7),
+    createdAt: new Date().toISOString(),
+  };
+  db.challenges.push(c);
+  save('challenges');
+  return c;
+});
+route('DELETE', '/api/hub/challenges/:id', ({ member, params }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Só a equipe apaga desafios');
+  db.challenges = db.challenges.filter((c) => c.id !== params.id);
+  save('challenges');
+  return { ok: true };
 });
 
 // ---------------------------------------------------------------- servidor

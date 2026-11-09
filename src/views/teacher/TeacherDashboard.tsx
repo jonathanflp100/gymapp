@@ -1,5 +1,6 @@
 import { TodayClassesCard } from '../../components/common/ClassWidgets';
 import { AtRiskCard } from '../../components/common/RetentionWidgets';
+import { EngagementCard } from '../../components/engagement/EngagementCard';
 import React, { useState, useEffect } from 'react';
 import { Users, ClipboardList, Library, Dumbbell, Calendar, Clock, ChevronRight, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -131,6 +132,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
       {/* Aulas de hoje */}
       <TodayClassesCard onOpen={() => onNavigateTab('classes')} />
+
+      <EngagementCard onOpen={() => onNavigateTab('engage')} />
 
       {/* Recent Students Activity */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">

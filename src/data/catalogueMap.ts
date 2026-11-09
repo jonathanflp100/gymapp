@@ -51,7 +51,9 @@ export const CATALOGUE_TO_GYMAPP: Record<string, string> = Object.fromEntries(
 );
 
 /** Id do GymApp → id do catálogo openGym (mantém o id se não houver equivalente). */
-export const toCatalogueId = (appId: string): string => GYMAPP_TO_CATALOGUE[appId] ?? appId;
+export const toCatalogueId = (appId: string): string =>
+  GYMAPP_TO_CATALOGUE[appId] ?? (appId.startsWith('og-') ? appId.slice(3) : appId);
 
 /** Id do catálogo openGym → id do GymApp (mantém o id se não houver equivalente). */
-export const toAppId = (catalogueId: string): string => CATALOGUE_TO_GYMAPP[catalogueId] ?? catalogueId;
+export const toAppId = (catalogueId: string): string =>
+  CATALOGUE_TO_GYMAPP[catalogueId] ?? (/^\d+$/.test(catalogueId) ? `og-${catalogueId}` : catalogueId);

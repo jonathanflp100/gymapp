@@ -14,12 +14,24 @@ import { TeacherDashboard } from './views/teacher/TeacherDashboard';
 import { StudentsView } from './views/teacher/StudentsView';
 import { RoutinesView } from './views/teacher/RoutinesView';
 import { ExerciseLibraryView } from './views/teacher/ExerciseLibraryView';
+import { EngagementView } from './views/teacher/EngagementView';
+import { CheckinHandler, hasPendingCheckin } from './components/engagement/CheckinHandler';
+import { useX } from './i18n/extraStrings';
 import { DemoControlView } from './views/demo/DemoControlView';
 import { LoginView } from './views/auth/LoginView';
 import { RealAuthView } from './views/auth/RealAuthView';
 import { DEFAULT_BRAND } from './config/brand';
 import { REAL_BACKEND } from './services/openGymBackend';
 import { Routine } from './types';
+
+function PendingCheckinBanner() {
+  const x = useX();
+  return (
+    <div className="fixed top-0 inset-x-0 z-50 bg-brand-primary text-white text-center text-sm font-bold py-2 px-4" role="status">
+      {x.engage.loginFirst}
+    </div>
+  );
+}
 
 function MainApp() {
   const { isAuthenticated, role } = useAuth();
@@ -57,6 +69,7 @@ function MainApp() {
   if (!isAuthenticated) {
     return (
       <>
+        {hasPendingCheckin() && <PendingCheckinBanner />}
         {REAL_BACKEND ? <RealAuthView /> : <LoginView />}
         <DemoControlView isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
       </>
@@ -77,6 +90,9 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-brand-primary selection:text-white">
+      {/* Check-in pelo QR da recepção (?checkin=CODIGO) */}
+      <CheckinHandler onDone={() => role === 'student' && setActiveTab('home')} />
+
       {/* Top Header */}
       <Header onOpenDemo={() => setIsDemoOpen(true)} onOpenProfile={() => setActiveTab('profile')} onOpenSettings={() => setActiveTab('settings')} />
 
@@ -124,6 +140,7 @@ function MainApp() {
             {activeTab === 'exercises' && <ExerciseLibraryView />}
             {activeTab === 'profile' && <ProfileView />}
             {activeTab === 'settings' && <SettingsView />}
+            {activeTab === 'engage' && <EngagementView />}
           </>
         )}
       </main>

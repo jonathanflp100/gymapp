@@ -1,3 +1,4 @@
+import { ExercisePicker } from '../../components/exercise/ExercisePicker';
 import React, { useState, useEffect } from 'react';
 import {
   Plus,
@@ -15,6 +16,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
+import { available, useInventory } from '../../services/inventory';
 import { Routine, RoutineExercise, Exercise, Student, MuscleGroup } from '../../types';
 
 interface RoutinesViewProps {
@@ -28,6 +30,8 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
 
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [exercisesCatalog, setExercisesCatalog] = useState<Exercise[]>([]);
+  const inventory = useInventory();
+  const firstAvailableId = () => (exercisesCatalog.find((e) => available(e, inventory)) ?? exercisesCatalog[0])?.id;
   const [students, setStudents] = useState<Student[]>([]);
 
   // Editor Modal State
@@ -67,7 +71,7 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
     setFormExercises([
       {
         id: `re-${Date.now()}-1`,
-        exerciseId: exercisesCatalog[0]?.id || 'ex-bench-press',
+        exerciseId: firstAvailableId() || 'ex-bench-press',
         sets: 4,
         reps: '8-10',
         targetWeightKg: 40,
@@ -93,7 +97,7 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
   const handleAddExerciseToForm = () => {
     const newRe: RoutineExercise = {
       id: `re-${Date.now()}-${formExercises.length + 1}`,
-      exerciseId: exercisesCatalog[0]?.id || 'ex-bench-press',
+      exerciseId: firstAvailableId() || 'ex-bench-press',
       sets: 3,
       reps: '10-12',
       targetWeightKg: 20,
@@ -368,19 +372,11 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-slate-400">#{idx + 1}</span>
                         {/* Select Exercise from Library */}
-                        <select
+                        <ExercisePicker
                           value={re.exerciseId}
-                          onChange={(e) =>
-                            handleUpdateExerciseRow(idx, { exerciseId: e.target.value })
-                          }
-                          className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white font-semibold focus:outline-none"
-                        >
-                          {exercisesCatalog.map((ex) => (
-                            <option key={ex.id} value={ex.id}>
-                              {ex.name[language] || ex.name['pt-BR']} ({t(`muscles.${ex.muscleGroup}`)})
-                            </option>
-                          ))}
-                        </select>
+                          exercises={exercisesCatalog}
+                          onChange={(id) => handleUpdateExerciseRow(idx, { exerciseId: id })}
+                        />
 
                         <button
                           type="button"

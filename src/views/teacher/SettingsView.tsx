@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Upload, Trash2, Save, Palette, Phone, Globe, Users, Share2, Copy, Printer, Search, Image as ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Save, Palette, Phone, Globe, Users, Share2, Copy, Printer, Search, Dumbbell, Image as ImageIcon } from 'lucide-react';
 import qrcode from 'qrcode-generator';
 import { BrandConfig } from '../../types';
 import { useBrand } from '../../context/BrandContext';
@@ -11,6 +11,7 @@ import { hub, HubMember, HubRole } from '../../services/hub';
 import { MOCK_STUDENTS, MOCK_TEACHERS } from '../../data/mockData';
 import { generateBrandLogoSvg } from '../../config/brand';
 import { useToast, initials } from '../../components/common/ui';
+import { EquipmentEditor } from '../../components/exercise/EquipmentEditor';
 
 const PALETTE = ['#DC2626', '#EA580C', '#D97706', '#16A34A', '#0D9488', '#0284C7', '#2563EB', '#4F46E5', '#7C3AED', '#DB2777', '#111827', '#B45309'];
 
@@ -246,6 +247,10 @@ export const SettingsView: React.FC = () => {
             ))}
           </div>
         </div>
+      </Section>
+
+      <Section icon={<Dumbbell className="w-4 h-4" />} title={x.inv.title} hint={x.inv.hint}>
+        <EquipmentEditor canEdit={isOwner} onSaved={(m) => showToast(m)} />
       </Section>
 
       <ShareSection name={brand.name} logo={previewLogo} />

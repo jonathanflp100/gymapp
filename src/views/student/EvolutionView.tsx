@@ -3,6 +3,7 @@ import { Activity, Dumbbell, Scale, Flame, ClipboardCheck, History as HistoryIco
 import { useX } from '../../i18n/extraStrings';
 import { AssessmentPanel } from '../../components/assessment/AssessmentPanel';
 import { HistoryView } from './HistoryView';
+import { WeightLogButton } from '../../components/engagement/WeightLogSheet';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { api } from '../../services/api';
@@ -18,7 +19,7 @@ import { MuscleMap } from '../../components/muscle/MuscleMap';
 import { EvolutionCharts } from '../../components/charts/EvolutionCharts';
 
 export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'assessment' | 'history' }> = ({ initialTab }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, refreshUser } = useAuth();
   const { t } = useLanguage();
 
   const student = currentUser as Student;
@@ -32,6 +33,8 @@ export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'ass
     null
   );
   const [isLoading, setIsLoading] = useState(true);
+
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     async function loadEvolution() {
@@ -56,7 +59,8 @@ export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'ass
     }
 
     loadEvolution();
-  }, [student]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id, reloadKey]);
 
   return (
     <div className="space-y-5 pb-28 animate-fadeIn">
@@ -95,6 +99,17 @@ export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'ass
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'metrics' && student && (
+        <WeightLogButton
+          studentId={student.id}
+          currentKg={weightHistory[weightHistory.length - 1]?.weightKg ?? student.currentWeightKg ?? 0}
+          targetKg={student.targetWeightKg || 0}
+          onSaved={() => {
+            setReloadKey((k) => k + 1);
+            refreshUser();
+          }}
+        />
+      )}
       {activeTab === 'metrics' && (
         <EvolutionCharts
           weightHistory={weightHistory}

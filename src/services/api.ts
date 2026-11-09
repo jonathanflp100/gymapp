@@ -19,6 +19,7 @@ import {
   MOCK_PERSONAL_RECORDS,
 } from '../data/mockData';
 import { localizeDemoData } from '../data/demoLocaleEs';
+import { searchExercises, loadCatalogue, getCatalogueExercise, isCatalogueId } from './catalogue';
 import { REAL_BACKEND, openGymApi } from './openGymBackend';
 import { aggregateMuscleStimulus, isNewPersonalRecord, calculateEpley1RM } from '../utils/rules';
 
@@ -198,28 +199,15 @@ const baseApi: GymApiService = {
 
   async getExercises(filter?: { muscleGroup?: MuscleGroup; query?: string }): Promise<Exercise[]> {
     await delay();
-    let result = [...exercisesStore];
-    if (filter?.muscleGroup) {
-      result = result.filter(
-        (ex) =>
-          ex.muscleGroup === filter.muscleGroup ||
-          ex.secondaryMuscleGroups?.includes(filter.muscleGroup as MuscleGroup)
-      );
-    }
-    if (filter?.query) {
-      const q = filter.query.toLowerCase().trim();
-      result = result.filter(
-        (ex) =>
-          ex.name['pt-BR'].toLowerCase().includes(q) ||
-          ex.name['es-PY'].toLowerCase().includes(q) ||
-          ex.muscleGroup.toLowerCase().includes(q)
-      );
-    }
-    return result;
+    return searchExercises(exercisesStore, filter);
   },
 
   async getExerciseById(id: string): Promise<Exercise | null> {
     await delay();
+    if (isCatalogueId(id)) {
+      await loadCatalogue();
+      return getCatalogueExercise(id);
+    }
     return exercisesStore.find((e) => e.id === id) || null;
   },
 
@@ -315,7 +303,10 @@ const baseApi: GymApiService = {
       date: new Date().toISOString().split('T')[0],
       weightKg,
     };
-    weightsStore.push(newRecord);
+    // Um registro por dia: o novo substitui o de hoje
+    const sameDay = weightsStore.findIndex((w) => w.date === newRecord.date);
+    if (sameDay !== -1) weightsStore[sameDay] = newRecord;
+    else weightsStore.push(newRecord);
     setStoredData(STORAGE_KEYS.WEIGHTS, weightsStore);
 
     // Update current student weight

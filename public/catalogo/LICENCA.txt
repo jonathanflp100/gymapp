@@ -1,0 +1,11 @@
+Catálogo de exercícios (somente textos: nomes, músculos e instruções)
+
+Origem: openGym — https://github.com/DuarteSantos8/openGym (pasta catalogue/, versão v1.4.4)
+Licença: GNU AGPL-3.0 (https://www.gnu.org/licenses/agpl-3.0.html) para descrições, traduções
+e exercícios novos do openGym. Os nomes, músculos e instruções originais das entradas vindas do
+ExerciseDB v1 (AscendAPI), via hasaneyldrm/exercises-dataset, são MIT
+(Copyright (c) 2026 Hasan Emir Yıldírım).
+
+Estes arquivos são dados separados, convertidos de formato (campos reduzidos, idiomas pt-BR e es),
+sem alteração do conteúdo. A fonte completa está no repositório acima.
+NÃO inclui as imagens/animações do openGym (licenciadas pela Gym visual).

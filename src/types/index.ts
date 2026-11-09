@@ -43,6 +43,12 @@ export interface Exercise {
     'pt-BR': string;
     'es-PY': string;
   };
+  /** animação de movimento (ver MovementAnimation) */
+  pattern?: string;
+  /** Grupo de equipamento (ver src/services/inventory.ts) */
+  kit?: string;
+  /** 'catalogue' = veio do catálogo completo */
+  source?: 'curated' | 'catalogue';
 }
 
 export interface RoutineExercise {
@@ -195,4 +201,38 @@ export interface BodyAssessment {
   thighCm: number;
   restingHr: number;
   notes?: string;
+}
+
+// ---------------------------------------------------------------- Mural, check-in e desafios
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  kind: 'info' | 'promo' | 'alert';
+  pinned: boolean;
+  expiresAt: string | null;
+  authorName: string;
+  createdAt: string;
+}
+
+export type ChallengeMetric = 'workouts' | 'checkins' | 'classes';
+
+export interface Challenge {
+  id: string;
+  title: Bilingual;
+  reward: Bilingual;
+  metric: ChallengeMetric;
+  target: number;
+  month: string; // AAAA-MM
+  createdAt: string;
+  progress: number;
+  done: boolean;
+  completedBy?: { id: string; name: string }[];
+  participants?: number;
+}
+
+export interface CheckinStats {
+  days: { date: string; count: number }[];
+  today: { id: string; name: string; at: string }[];
 }

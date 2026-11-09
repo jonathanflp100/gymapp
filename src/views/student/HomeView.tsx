@@ -1,5 +1,6 @@
 import { NextClassCard } from '../../components/common/ClassWidgets';
 import { RankingCard } from '../../components/common/RetentionWidgets';
+import { AnnouncementsCard, CheckinCard, ChallengesCard, ReminderBanner } from '../../components/engagement/StudentEngagement';
 import React, { useState, useEffect } from 'react';
 import { Flame, Dumbbell, Clock, ArrowRight, Play, CheckCircle2, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -63,6 +64,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
 
   return (
     <div className="space-y-6 pb-28 animate-fadeIn">
+      {student && <ReminderBanner studentId={student.id} lastWorkoutDate={isLoading ? undefined : recentHistory[0]?.completedAt} streakDays={student.currentStreakDays || 0} />}
       {/* 1. Header Greeting & Streak Flame Banner */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden">
         {/* Glow accent */}
@@ -194,11 +196,20 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
         </div>
       )}
 
+      {/* Check-in do dia */}
+      <CheckinCard />
+
+      {/* Mural de avisos */}
+      <AnnouncementsCard />
+
       {/* Próxima aula coletiva */}
       {student && <NextClassCard studentId={student.id} onOpen={() => onNavigateToTab('classes')} />}
 
       {/* Ranking do mês */}
       {student && <RankingCard studentId={student.id} />}
+
+      {/* Desafios do mês */}
+      <ChallengesCard />
 
       {/* 3. Quick Stats Grid */}
       <div className="grid grid-cols-2 gap-3">

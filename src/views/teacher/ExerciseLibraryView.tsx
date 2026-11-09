@@ -1,6 +1,11 @@
 import { ExerciseGuideSheet } from '../../components/exercise/ExerciseGuideSheet';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Dumbbell, Filter, X, Check, Save, PlayCircle } from 'lucide-react';
+import { Search, Plus, Dumbbell, Filter, X, Check, Save, PlayCircle, EyeOff, Eye, Settings2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useX } from '../../i18n/extraStrings';
+import { available, isConfigured, saveInventory, useInventory } from '../../services/inventory';
+import { EquipmentEditor } from '../../components/exercise/EquipmentEditor';
+import { Sheet, useToast } from '../../components/common/ui';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
 import { api } from '../../services/api';
@@ -15,6 +20,23 @@ export const ExerciseLibraryView: React.FC = () => {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | 'all'>('all');
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [guide, setGuide] = useState<Exercise | null>(null);
+  const [visible, setVisible] = useState(40);
+  const x = useX();
+  const { isOwner } = useAuth();
+  const inv = useInventory();
+  const [scope, setScope] = useState<'gym' | 'all' | 'hidden'>('gym');
+  const [equipOpen, setEquipOpen] = useState(false);
+  const [toast, showToast] = useToast();
+
+  const shown = exercises.filter((ex) =>
+    scope === 'all' ? true : scope === 'hidden' ? inv.hidden.includes(ex.id) : available(ex, inv)
+  );
+
+  const toggleHidden = async (ex: Exercise) => {
+    const isHidden = inv.hidden.includes(ex.id);
+    await saveInventory({ hidden: isHidden ? inv.hidden.filter((h) => h !== ex.id) : [...inv.hidden, ex.id] });
+    showToast(isHidden ? x.inv.unhiddenToast : x.inv.hiddenToast);
+  };
 
   // New exercise form fields
   const [newPtName, setNewPtName] = useState('');
@@ -32,8 +54,11 @@ export const ExerciseLibraryView: React.FC = () => {
   };
 
   useEffect(() => {
+    setVisible(40);
     loadExercises();
   }, [searchQuery, selectedMuscle]);
+
+  useEffect(() => setVisible(40), [scope]);
 
   const handleCreateExercise = async () => {
     if (!newPtName.trim()) {
@@ -80,7 +105,7 @@ export const ExerciseLibraryView: React.FC = () => {
             {t('teacher.exerciseLibraryTitle')}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            {exercises.length} {t('teacher.exerciseLibrarySubtitle')}
+            {shown.length.toLocaleString(language)} {t("teacher.exerciseLibrarySubtitle")}
           </p>
         </div>
 
@@ -93,6 +118,65 @@ export const ExerciseLibraryView: React.FC = () => {
           <span>{t('teacher.addCustomExercise')}</span>
         </button>
       </div>
+
+      {/* Equipamentos da academia */}
+      {isOwner && !isConfigured(inv) ? (
+        <button
+          type="button"
+          onClick={() => setEquipOpen(true)}
+          className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-brand-primary-subtle border border-brand-primary/30 text-left"
+        >
+          <Settings2 className="w-5 h-5 text-brand-primary shrink-0" />
+          <span className="flex-1">
+            <span className="block text-sm font-black text-white">{x.inv.setupCta}</span>
+            <span className="block text-[11px] text-slate-300">{x.inv.notSet}</span>
+          </span>
+        </button>
+      ) : null}
+
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" role="tablist">
+        {(
+          [
+            ['gym', x.inv.onlyGym],
+            ['all', x.inv.fullCatalogue],
+            ...(inv.hidden.length ? [['hidden', `${x.inv.hiddenTab} (${inv.hidden.length})`]] : []),
+          ] as [typeof scope, string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={scope === id}
+            onClick={() => setScope(id)}
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+              scope === id ? 'bg-white text-slate-950 border-transparent' : 'bg-slate-900 border-slate-800 text-slate-400'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        {isOwner && isConfigured(inv) && (
+          <button
+            type="button"
+            onClick={() => setEquipOpen(true)}
+            aria-label={x.inv.title}
+            className="ml-auto shrink-0 p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300"
+          >
+            <Settings2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <Sheet open={equipOpen} onClose={() => setEquipOpen(false)} tall title={<h3 className="text-base font-black text-white">{x.inv.title}</h3>}>
+        <p className="text-[11px] text-slate-400 mb-3">{x.inv.hint}</p>
+        <EquipmentEditor
+          canEdit={isOwner}
+          onSaved={(m) => {
+            showToast(m);
+            setEquipOpen(false);
+          }}
+        />
+      </Sheet>
 
       {/* Search Input */}
       <div className="relative">
@@ -131,12 +215,14 @@ export const ExerciseLibraryView: React.FC = () => {
 
       {/* Exercise Cards List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {exercises.map((ex) => (
+        {shown.slice(0, visible).map((ex) => (
+          <div key={ex.id} className="relative">
           <button
             type="button"
-            key={ex.id}
             onClick={() => setGuide(ex)}
-            className="text-left bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex items-center gap-3.5 hover:border-slate-700 active:scale-[0.99] transition"
+            className={`w-full text-left bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex items-center gap-3.5 hover:border-slate-700 active:scale-[0.99] transition ${
+              isOwner ? 'pr-14' : ''
+            } ${scope === 'all' && !available(ex, inv) ? 'opacity-50' : ''}`}
           >
             {/* Visual Icon Badge */}
             <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-brand-primary shrink-0">
@@ -156,8 +242,29 @@ export const ExerciseLibraryView: React.FC = () => {
             </div>
             <PlayCircle className="w-5 h-5 text-brand-primary shrink-0" />
           </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => toggleHidden(ex)}
+              aria-label={inv.hidden.includes(ex.id) ? x.inv.unhide : x.inv.hide}
+              title={inv.hidden.includes(ex.id) ? x.inv.unhide : x.inv.hide}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800"
+            >
+              {inv.hidden.includes(ex.id) ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </button>
+          )}
+          </div>
         ))}
       </div>
+      {shown.length > visible && (
+        <button
+          type="button"
+          onClick={() => setVisible((v) => v + 40)}
+          className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white"
+        >
+          {language === 'es-PY' ? 'Ver más' : 'Ver mais'} ({(shown.length - visible).toLocaleString(language)})
+        </button>
+      )}
 
       {/* NEW EXERCISE MODAL */}
       {isNewModalOpen && (
@@ -264,6 +371,7 @@ export const ExerciseLibraryView: React.FC = () => {
         </div>
       )}
       <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} />
+      {toast}
     </div>
   );
 };

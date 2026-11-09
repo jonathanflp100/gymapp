@@ -1,7 +1,7 @@
 /**
  * Cliente do servidor da academia (server/hub). Usado só no modo completo.
  */
-import type { BodyAssessment, BrandConfig, GroupClass, Routine, WorkoutHistoryEntry } from '../types';
+import type { Announcement, BodyAssessment, BrandConfig, Challenge, CheckinStats, GroupClass, Routine, WorkoutHistoryEntry } from '../types';
 import type { ClassOccurrence } from './extrasApi';
 
 export type HubRole = 'owner' | 'teacher' | 'student';
@@ -26,6 +26,7 @@ export interface HubStats {
   active7: number;
   atRisk: { id: string; name: string; lastWorkoutAt: string | null; joinedAt: string }[];
   workouts7: number;
+  checkinsToday?: number;
   classesToday: number;
   bookedToday: number;
   capacityToday: number;
@@ -95,4 +96,22 @@ export const hub = {
 
   ranking: () => call<Ranking>('GET', '/ranking'),
   stats: () => call<HubStats>('GET', '/stats'),
+
+  announcements: () => call<Announcement[]>('GET', '/announcements'),
+  postAnnouncement: (a: Pick<Announcement, 'title' | 'body' | 'kind' | 'pinned' | 'expiresAt'>) =>
+    call<Announcement>('POST', '/announcements', a),
+  deleteAnnouncement: (id: string) => call('DELETE', `/announcements/${encodeURIComponent(id)}`),
+
+  checkinCode: () => call<{ code: string; date: string; count: number }>('GET', '/checkin/code'),
+  checkin: (code: string) => call<{ ok: boolean; already: boolean; at: string }>('POST', '/checkin', { code }),
+  checkins: (studentId: string) => call<{ date: string; at: string }[]>('GET', `/checkins${q({ studentId })}`),
+  checkinStats: () => call<CheckinStats>('GET', '/checkins/stats'),
+
+  inventory: () => call<{ kits: string[] | null; hidden: string[] }>('GET', '/inventory'),
+  saveInventory: (inv: { kits?: string[] | null; hidden?: string[] }) =>
+    call<{ kits: string[] | null; hidden: string[] }>('PUT', '/inventory', inv),
+
+  challenges: () => call<Challenge[]>('GET', '/challenges'),
+  createChallenge: (c: Pick<Challenge, 'title' | 'reward' | 'metric' | 'target' | 'month'>) => call<Challenge>('POST', '/challenges', c),
+  deleteChallenge: (id: string) => call('DELETE', `/challenges/${encodeURIComponent(id)}`),
 };
