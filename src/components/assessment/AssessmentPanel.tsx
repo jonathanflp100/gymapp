@@ -35,7 +35,8 @@ export const AssessmentPanel: React.FC<{ studentId: string; canAdd?: boolean }> 
 
   const last = list[list.length - 1];
   const prev = list[list.length - 2];
-  const teacherName = (id: string) => {
+  const teacherName = (id: string, given?: string) => {
+    if (given) return given;
     const n = MOCK_TEACHERS.find((t) => t.id === id)?.name ?? '';
     return language === 'es-PY' ? DEMO_TEXT_ES[n] ?? n : n;
   };
@@ -76,7 +77,7 @@ export const AssessmentPanel: React.FC<{ studentId: string; canAdd?: boolean }> 
                   {formatDate(last.date, { day: '2-digit', month: 'long', year: 'numeric' })}
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  {x.assessment.by} {teacherName(last.teacherId)}
+                  {x.assessment.by} {teacherName(last.teacherId, last.teacherName)}
                 </div>
               </div>
               {nextDate && (

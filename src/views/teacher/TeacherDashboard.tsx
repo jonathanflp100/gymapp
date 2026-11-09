@@ -1,4 +1,5 @@
 import { TodayClassesCard } from '../../components/common/ClassWidgets';
+import { AtRiskCard } from '../../components/common/RetentionWidgets';
 import React, { useState, useEffect } from 'react';
 import { Users, ClipboardList, Library, Dumbbell, Calendar, Clock, ChevronRight, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -124,6 +125,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           </span>
         </div>
       </div>
+
+      {/* Retenção: quem sumiu */}
+      <AtRiskCard />
 
       {/* Aulas de hoje */}
       <TodayClassesCard onOpen={() => onNavigateTab('classes')} />

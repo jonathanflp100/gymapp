@@ -1,151 +1,125 @@
-# GymApp — app white-label para academias
+# GymApp — app com a marca da academia
 
-App (PWA) com a marca de cada academia. Português (Brasil) e espanhol (Paraguai).
-Funciona de dois jeitos:
+App (PWA) que o aluno instala no celular, com o nome, a logo e as cores da academia.
+Português (Brasil) e espanhol (Paraguai).
 
-| Modo | Para quê | Dados |
+## O que o produto faz
+
+**Aluno**
+- Treino do dia, sequência de dias, execução com timer de descanso e cargas anteriores
+- Fichas montadas pelo professor (chegam sozinhas no app)
+- Guia de cada exercício: passo a passo, dica, erro comum e espaço para o vídeo da academia
+- Aulas coletivas: grade da semana, reserva e cancelamento, vagas restantes
+- Evolução: cargas, recordes, mapa muscular, histórico
+- Avaliação física: peso, % de gordura, massa magra, medidas, gráfico de evolução
+- Ranking do mês (dias treinados) para motivar
+
+**Professor**
+- Painel com alunos, aulas de hoje e **alunos sumidos** (com mensagem pronta no WhatsApp)
+- Ficha completa do aluno: frequência, fichas, avaliações e treinos
+- Criar fichas e atribuir a um ou vários alunos
+- Grade de aulas: criar, excluir, lotação e lista de presença
+- Registrar avaliações físicas
+
+**Administrador (dono)**
+- Tela de configurações: logo, cores, nome, slogan, WhatsApp, endereço, idioma, com prévia ao vivo
+- Equipe: define quem é aluno, professor ou administrador; inativa matrícula
+- Divulgação: link, QR code e **cartaz pronto para imprimir** na recepção
+
+## Como funciona por dentro
+
+| Peça | O que guarda | Onde |
 |---|---|---|
-| **Demo** (padrão) | Mostrar para clientes, Cloudflare Pages | Exemplo, sem servidor |
-| **Completo** (`VITE_BACKEND=opengym`) | Uso real na academia | Contas e treinos salvos no servidor **openGym** |
+| **App** (React/Vite) | nada, é a tela | `src/` |
+| **openGym** v1.4.4 | contas, senhas e treinos de cada aluno | compilado do código oficial |
+| **Servidor da academia** (hub) | marca, equipe, fichas do professor, aulas, avaliações, ranking | `server/hub/server.mjs` (Node, sem dependências) |
 
----
+O login é do openGym; o hub confere a mesma sessão. Os dados ficam em arquivos na pasta `data/`.
 
-## Versão completa (GymApp + servidor openGym)
+## Três formas de usar
 
-O app fica com a marca da academia, e o openGym guarda as contas e os treinos.
-Os dados ficam no formato do openGym, então a mesma conta também abre no app oficial dele.
+### 1. Demo de vendas (grátis, Cloudflare Pages)
 
-### Opção A: com Docker (recomendado)
+Dados de exemplo, sem servidor. Ideal para mostrar ao cliente.
 
-Precisa do [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e aberto.
+- Build command `npm run build`, pasta `dist`.
+- Abra `/demo` para trocar de academia, cores e idioma ao vivo; alterne entre aluno e professor.
+- A engrenagem (como professor) abre as configurações.
+
+### 2. Licença própria (servidor da academia)
+
+Na VPS da academia, com Docker instalado:
 
 ```bash
+cp .env.example .env      # preencha domínio, nome e um SETUP_CODE seu
 docker compose up -d --build
 ```
 
-Abra **http://localhost:8080**, toque em **Criar conta** e pronto.
+Depois: abra o endereço → **Criar conta** → **Perfil → Administrador da academia** → digite o `SETUP_CODE`.
+A engrenagem no topo abre as configurações. Coloque HTTPS na frente (Caddy, Nginx Proxy Manager ou Cloudflare).
 
-- Marca do Paraguai (Gimnasio Titán, espanhol):
-  - PowerShell: `$env:BRAND="titan"; docker compose up -d --build`
-  - Linux/Mac: `BRAND=titan docker compose up -d --build`
-- Parar: `docker compose down`
-- Os dados ficam na pasta `data/`. **Faça backup dela.**
+Custo da academia: uma VPS pequena (ex.: Hostinger KVM 1) e um domínio.
 
-A primeira subida demora alguns minutos (compila o openGym v1.4.4 a partir do código oficial).
+### 3. SaaS (várias academias na sua VPS)
 
-### Opção B: sem Docker (Node 22)
+Cada academia fica isolada (dados separados) e ganha seu endereço com HTTPS automático.
 
-Terminal 1, servidor openGym:
-
-```powershell
-git clone --branch v1.4.4 --depth 1 https://github.com/DuarteSantos8/openGym
-cd openGym\api
-npm install --omit=optional
-$env:PORT="3001"; $env:DATA_DIR="$PWD\..\..\gym-data"; $env:PASSWORD_LOGIN="1"; $env:ORIGIN="http://localhost:3000"
-node server.js
+```bash
+cd deploy/saas
+ACME_EMAIL=voce@seudominio.com ./scripts/instalar.sh          # uma vez
+./scripts/nova-academia.sh forcatotal app.forcatotal.com.br "Academia Força Total" pt-BR "#DC2626"
+./scripts/nova-academia.sh titan titan.seuapp.com "Gimnasio Titán" es-PY "#2563EB"
 ```
 
-Terminal 2, o app (na pasta `gymapp`):
+O script mostra o **código de ativação** do dono. Antes, aponte o domínio (registro A) para o IP da VPS.
 
-```powershell
-npm install
-$env:VITE_BACKEND="opengym"; $env:VITE_BRAND="titan"; $env:OPENGYM_URL="http://localhost:3001"
-npm run dev
-```
+| Script | Para quê |
+|---|---|
+| `listar.sh` | academias e status |
+| `pausar-academia.sh <apelido>` | mensalidade atrasada: tira do ar, guarda os dados |
+| `reativar-academia.sh <apelido>` | volta ao ar |
+| `backup.sh` | backup de tudo (agende no cron, guarda 14 dias) |
+| `atualizar.sh` | depois de `git pull`: faz backup e atualiza todas |
 
-Abra **http://localhost:3000**.
+Uma VPS com 2 vCPU e 8 GB (ex.: Hostinger KVM 2) deve comportar dezenas de academias; meça com
+`docker stats` conforme crescer.
 
-### Instalar no servidor de uma academia
-
-No servidor (VPS da academia) com Docker, dentro da pasta do projeto, crie um arquivo `.env`:
-
-```env
-ORIGIN=https://app.academia.com.br
-RP_ID=app.academia.com.br
-BRAND=forcaTotal
-WEB_PORT=8080
-```
-
-Depois `docker compose up -d --build` e aponte o domínio (com HTTPS) para a porta 8080.
-Depois de criar a sua conta, coloque `INVITE_ONLY=1` no `.env` para só entrar quem tiver convite.
-
-### O que já funciona no modo completo
-
-- Criar conta e entrar com nome/e-mail e senha (mensagens em português e espanhol)
-- Fichas iniciais (A, B e C) criadas na primeira entrada, no idioma do aluno
-- Executar treino e salvar no servidor (séries, cargas, volume)
-- Histórico, recordes pessoais, mapa muscular e evolução vindos do servidor
-- Sessão mantida ao recarregar e sincronização com conflito resolvido (vários aparelhos)
-
-### O que ainda falta
-
-- **Painel do professor** no modo completo: o openGym ainda não tem esse papel (previsto para a v1.4.10).
-  Na demo ele continua funcionando com dados de exemplo.
-- Biblioteca usa os 40 exercícios do app (o catálogo do openGym tem 5.632; dá para trazer depois).
-- Registrar peso corporal pela tela do app.
-
----
-
-## Demo de vendas
-
-### O que a demo mostra
-
-**Aluno:** treino do dia com sequência, execução do treino com timer e cargas anteriores,
-guia de cada exercício (vídeo, passo a passo, dica e erro comum), **aulas coletivas** com
-reserva de vaga, evolução de cargas e recordes, mapa muscular, **avaliação física** com
-gráfico de % de gordura e medidas, histórico e WhatsApp da academia.
-
-**Professor:** painel com alunos e aulas do dia, **ficha completa do aluno** (resumo,
-frequência semanal, fichas atribuídas, avaliação física, treinos), criação de fichas,
-**grade de aulas** com lotação, lista de presença e criação de aulas, e biblioteca de
-exercícios com guia de execução.
-
-> Aulas e avaliações ficam salvas no aparelho (dados de exemplo) nos dois modos. No modo
-> completo, só treinos, fichas e pesagens vão para o servidor openGym.
+## Desenvolvimento
 
 ```bash
 npm install
-npm run dev
+npm run dev                         # demo
 ```
 
-Abre em http://localhost:3000
+Modo completo local (Node 22), em três terminais:
 
-- Abra `/demo` (ou `?demo=1`) para o painel white-label.
-- Troque entre **Força Total** (Brasil, pt-BR) e **Gimnasio Titán** (Paraguai, es-PY).
-- Mude nome, slogan, cores e WhatsApp ao vivo, na frente do cliente.
-- "Usar como Professor" mostra o painel do professor.
+```bash
+# 1. openGym
+git clone --branch v1.4.4 --depth 1 https://github.com/DuarteSantos8/openGym && cd openGym/api
+npm install --omit=optional
+PORT=3001 DATA_DIR=./dados PASSWORD_LOGIN=1 ORIGIN=http://localhost:3000 RP_ID=localhost node server.js
 
-### Publicar grátis (Cloudflare Pages)
+# 2. servidor da academia (na pasta gymapp)
+PORT=4001 DATA_DIR=./data/hub OPENGYM_URL=http://localhost:3001 SETUP_CODE=teste123 node server/hub/server.mjs
 
-1. Entre em https://dash.cloudflare.com → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-2. Escolha o repositório `gymapp`.
-3. Configuração de build:
-   - Framework preset: **Vite** (ou "None")
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. **Save and Deploy**. Sai um link tipo `gymapp.pages.dev`.
+# 3. app (na pasta gymapp)
+VITE_BACKEND=opengym OPENGYM_URL=http://localhost:3001 HUB_URL=http://localhost:4001 npm run dev
+```
 
-Cada `git push` publica de novo sozinho.
-
----
-
-## Personalizar uma academia nova
-
-Edite `src/config/brand.ts` e adicione um preset com nome, logo, cores, idioma, WhatsApp e código.
+No PowerShell, use `$env:NOME="valor";` antes de cada comando.
 
 ## Estrutura
 
-- `src/config/brand.ts` — identidade de cada academia (presets; `VITE_BRAND` escolhe a padrão)
-- `src/i18n/translations.ts` — todos os textos em pt-BR e es-PY
-- `src/services/api.ts` — única porta de acesso a dados: escolhe entre demo e servidor real
-- `src/services/openGymBackend.ts` — ponte com o openGym (login, leitura e gravação, conversão de formatos)
-- `src/data/catalogueMap.ts` — cada exercício do app ligado ao exercício do catálogo openGym
-- `src/data/mockData.ts` — dados de demonstração
-- `src/data/demoLocaleEs.ts` — tradução dos dados de demonstração para espanhol
-- `Dockerfile`, `deploy/nginx.conf`, `docker-compose.yml` — pacote da versão completa
+- `src/services/api.ts`: porta de dados (demo ou servidor)
+- `src/services/openGymBackend.ts`: contas e treinos (openGym), ciente do papel do usuário
+- `src/services/hub.ts` e `src/services/extrasApi.ts`: servidor da academia (aulas, avaliações, equipe)
+- `src/views/teacher/SettingsView.tsx`: configurações da academia
+- `server/hub/`: servidor da academia + Dockerfile
+- `deploy/nginx.conf`: rotas `/api/hub` → hub, `/api` → openGym
+- `deploy/saas/`: Caddy, modelo por academia e scripts
 
 ## Licenças
 
-O servidor openGym é AGPL-3.0 (https://github.com/DuarteSantos8/openGym). Este pacote usa o
-openGym sem modificações, compilado do código oficial. As imagens de exercício do openGym têm
-licença própria e não são usadas pelo GymApp.
+O openGym é AGPL-3.0 (https://github.com/DuarteSantos8/openGym) e é usado sem modificações.
+As imagens e animações de exercício do openGym pertencem ao Gym Visual e **não** são usadas
+(`EXERCISE_MEDIA=off`); para usá-las comercialmente é preciso licença própria em gymvisual.com.

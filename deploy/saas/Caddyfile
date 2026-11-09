@@ -1,0 +1,7 @@
+{
+	# Troque pelo seu e-mail: o Let's Encrypt avisa sobre certificados por ele.
+	email {$ACME_EMAIL:voce@exemplo.com}
+}
+
+# Cada academia ganha um arquivo em sites/<academia>.caddy (criado pelo script nova-academia.sh)
+import /etc/caddy/sites/*.caddy

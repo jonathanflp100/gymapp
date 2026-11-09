@@ -3,7 +3,8 @@ import { Student, Teacher, UserRole } from '../types';
 import { api } from '../services/api';
 import { useBrand } from './BrandContext';
 import { useLanguage } from '../i18n/LanguageContext';
-import { REAL_BACKEND, openGymAuth, setRealGymCode } from '../services/openGymBackend';
+import { REAL_BACKEND, openGymAuth, setRealGymCode, setHubMember } from '../services/openGymBackend';
+import { hub, HubMember } from '../services/hub';
 
 interface AuthContextType {
   currentUser: Student | Teacher | null;
@@ -16,6 +17,12 @@ interface AuthContextType {
   realSignIn: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
   realRegister: (name: string, password: string, email?: string, code?: string) => Promise<{ success: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
+  /** Membro no servidor da academia (modo completo). */
+  hubMember: HubMember | null;
+  /** Dono/administrador: pode mudar marca, equipe e papéis. */
+  isOwner: boolean;
+  /** Ativa o usuário logado como administrador com o código de implantação. */
+  claimOwner: (code: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { language } = useLanguage();
   const [currentUser, setCurrentUser] = useState<Student | Teacher | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [hubMember, setHubMemberState] = useState<HubMember | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Restore session or bootstrap default demo student
@@ -161,15 +169,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) {
       setCurrentUser(null);
       setRole(null);
+      setHubMember(null);
+      setHubMemberState(null);
       return false;
     }
     setRealGymCode(brand.gymCode);
+    let member: HubMember | null = null;
+    try {
+      member = (await hub.me()).member;
+    } catch (err) {
+      console.warn('Servidor da academia indisponível; seguindo como aluno.', err);
+    }
+    setHubMember(member);
+    setHubMemberState(member);
+    if (member && member.role !== 'student') {
+      const teacher = await api.getTeacherById(user.id);
+      setCurrentUser(teacher);
+      setRole('teacher');
+      return true;
+    }
     await openGymAuth.seedIfEmpty(language);
     const student = await api.getStudentById(user.id);
     setCurrentUser(student);
     setRole('student');
     return true;
   }
+
+  const claimOwner = async (code: string) => {
+    try {
+      await hub.claim(code.trim());
+      await loadRealUser();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  };
 
   const realSignIn = async (identifier: string, password: string) => {
     const res = await openGymAuth.login(identifier.trim(), password);
@@ -217,6 +251,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshUser,
         realSignIn,
         realRegister,
+        hubMember,
+        isOwner: REAL_BACKEND ? hubMember?.role === 'owner' : role === 'teacher',
+        claimOwner,
       }}
     >
       {!isLoading && children}

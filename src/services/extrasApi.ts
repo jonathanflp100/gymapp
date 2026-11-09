@@ -7,6 +7,8 @@
  */
 import { BodyAssessment, ClassBooking, GroupClass, Student } from '../types';
 import { MOCK_STUDENTS } from '../data/mockData';
+import { REAL_BACKEND } from './openGymBackend';
+import { hub } from './hub';
 
 const KEYS = {
   classes: 'gymapp_extra_classes',
@@ -243,7 +245,7 @@ export interface ClassOccurrence {
   isPast: boolean;
 }
 
-export const extrasApi = {
+const demoExtras = {
   // ---------- Aulas
   async getClassesForDate(date: string, studentId?: string): Promise<ClassOccurrence[]> {
     const weekday = new Date(`${date}T12:00:00`).getDay();
@@ -364,3 +366,34 @@ export const extrasApi = {
     });
   },
 };
+
+/**
+ * Modo completo: aulas e avaliações no servidor da academia (hub).
+ * Demo: tudo no aparelho com dados de exemplo.
+ */
+const realExtras: typeof demoExtras = {
+  getClassesForDate: (date) => hub.classes(date),
+  getMyUpcoming: () => hub.myClasses(),
+  book: (classId, date) => hub.book(classId, date),
+  cancel: async (classId, date) => {
+    await hub.cancel(classId, date);
+  },
+  getAttendees: (classId, date) => hub.attendees(classId, date),
+  createClass: (data) => hub.createClass(data),
+  deleteClass: async (id) => {
+    await hub.deleteClass(id);
+  },
+  async todaySummary() {
+    const list = await hub.classes(localDay());
+    return {
+      classes: list.length,
+      booked: list.reduce((a, c) => a + c.booked, 0),
+      capacity: list.reduce((a, c) => a + c.cls.capacity, 0),
+    };
+  },
+  getAssessments: (studentId) => hub.assessments(studentId),
+  saveAssessment: (data) => hub.saveAssessment(data),
+  resetDemo: async () => undefined,
+};
+
+export const extrasApi = REAL_BACKEND ? realExtras : demoExtras;

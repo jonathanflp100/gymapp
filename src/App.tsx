@@ -8,6 +8,7 @@ import { HomeView } from './views/student/HomeView';
 import { WorkoutView } from './views/student/WorkoutView';
 import { EvolutionView } from './views/student/EvolutionView';
 import { ClassesView } from './views/shared/ClassesView';
+import { SettingsView } from './views/teacher/SettingsView';
 import { ProfileView } from './views/student/ProfileView';
 import { TeacherDashboard } from './views/teacher/TeacherDashboard';
 import { StudentsView } from './views/teacher/StudentsView';
@@ -22,7 +23,7 @@ import { Routine } from './types';
 
 function MainApp() {
   const { isAuthenticated, role } = useAuth();
-  const { brand } = useBrand();
+  const { brand, brandLoading } = useBrand();
   const { language } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
@@ -50,6 +51,9 @@ function MainApp() {
     }
   }, [role]);
 
+  // Modo completo: espera a marca da academia para não piscar a marca padrão
+  if (brandLoading) return <div className="min-h-screen bg-slate-950" aria-busy="true" />;
+
   if (!isAuthenticated) {
     return (
       <>
@@ -74,7 +78,7 @@ function MainApp() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-brand-primary selection:text-white">
       {/* Top Header */}
-      <Header onOpenDemo={() => setIsDemoOpen(true)} onOpenProfile={() => setActiveTab('profile')} />
+      <Header onOpenDemo={() => setIsDemoOpen(true)} onOpenProfile={() => setActiveTab('profile')} onOpenSettings={() => setActiveTab('settings')} />
 
       {/* Main View Area (Mobile-First constrained container) */}
       <main key={language} className="flex-1 max-w-md w-full mx-auto px-4 pt-4">
@@ -119,6 +123,7 @@ function MainApp() {
             {activeTab === 'classes' && <ClassesView mode="teacher" />}
             {activeTab === 'exercises' && <ExerciseLibraryView />}
             {activeTab === 'profile' && <ProfileView />}
+            {activeTab === 'settings' && <SettingsView />}
           </>
         )}
       </main>

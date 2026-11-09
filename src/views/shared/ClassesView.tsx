@@ -40,7 +40,8 @@ export const ClassesView: React.FC<{ mode: 'student' | 'teacher' }> = ({ mode })
 
   const studentId = mode === 'student' ? currentUser?.id : undefined;
 
-  const teacherName = (id: string) => {
+  const teacherName = (id: string, given?: string) => {
+    if (given) return given;
     const n = MOCK_TEACHERS.find((t) => t.id === id)?.name ?? '';
     return language === 'es-PY' ? DEMO_TEXT_ES[n] ?? n : n;
   };
@@ -197,7 +198,7 @@ export const ClassesView: React.FC<{ mode: 'student' | 'teacher' }> = ({ mode })
                       <MapPin className="w-3 h-3" />
                       {bi(o.cls.room)}
                     </span>
-                    <span>· {teacherName(o.cls.teacherId)}</span>
+                    <span>· {teacherName(o.cls.teacherId, o.cls.teacherName)}</span>
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -257,7 +258,7 @@ export const ClassesView: React.FC<{ mode: 'student' | 'teacher' }> = ({ mode })
               <Info icon={<MapPin className="w-3.5 h-3.5" />} text={bi(detail.cls.room)} />
               <Info icon={<Flame className="w-3.5 h-3.5" />} text={x.classes.intensity[detail.cls.intensity - 1]} />
               <Info icon={<Users className="w-3.5 h-3.5" />} text={`${detail.booked} ${x.classes.of} ${detail.cls.capacity}`} />
-              <Info icon={<span className="text-[9px] font-black">{initials(teacherName(detail.cls.teacherId))}</span>} text={teacherName(detail.cls.teacherId)} />
+              <Info icon={<span className="text-[9px] font-black">{initials(teacherName(detail.cls.teacherId, detail.cls.teacherName))}</span>} text={teacherName(detail.cls.teacherId, detail.cls.teacherName)} />
             </div>
 
             {mode === 'student' && !detail.isPast && (
@@ -322,7 +323,8 @@ export const ClassesView: React.FC<{ mode: 'student' | 'teacher' }> = ({ mode })
           setCreating(false);
           showToast(x.classes.create + ' ✓');
           const target = days.find((d) => d.getDay() === weekday);
-          if (target) setSelected(localDay(target));
+          const key = target ? localDay(target) : selected;
+          if (key !== selected) setSelected(key); // o efeito recarrega
           else await refresh();
         }}
       />

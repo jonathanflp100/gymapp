@@ -1,37 +1,62 @@
-# GymApp (app com a marca da academia) + openGym (servidor de dados).
-# Subir:  docker compose up -d --build     Abrir: http://localhost:8080
+# GymApp — LICENÇA PRÓPRIA (uma academia neste servidor).
+#
+# 1. Copie .env.example para .env e preencha (domínio, nome, código de ativação).
+# 2. docker compose up -d --build
+# 3. Abra o endereço, crie sua conta e, em Perfil → "Administrador da academia",
+#    digite o SETUP_CODE. Pronto: o ícone de engrenagem abre as configurações.
+#
+# Para várias academias num servidor só (SaaS), use deploy/saas.
 name: gymapp
 
+x-tz: &tz
+  TZ: ${TZ:-America/Sao_Paulo}
+
 services:
-  # Servidor openGym: contas, senhas e os dados de treino de cada aluno.
+  # openGym: contas, senhas e os treinos de cada aluno.
   api:
-    # Compilado direto do código oficial do openGym, versão fixa v1.4.4.
+    # Compilado do código oficial do openGym, versão fixa v1.4.4.
     build: https://github.com/DuarteSantos8/openGym.git#v1.4.4:api
     restart: unless-stopped
     environment:
-      - PORT=3000
-      - DATA_DIR=/data
-      - TRUST_PROXY=1
-      # Endereço exato que aparece no navegador. Mude ao instalar num domínio (https://app.academia.com).
-      - ORIGIN=${ORIGIN:-http://localhost:8080}
-      - RP_ID=${RP_ID:-localhost}
-      # Login com nome/e-mail e senha (o GymApp usa isso).
-      - PASSWORD_LOGIN=1
-      - ALLOW_GUEST=0
-      # Depois de criar sua conta, mude para 1 para só entrar quem tiver convite.
-      - INVITE_ONLY=${INVITE_ONLY:-0}
+      <<: *tz
+      PORT: 3000
+      DATA_DIR: /data
+      TRUST_PROXY: 1
+      # Endereço exato que aparece no navegador (https://app.academia.com.br).
+      ORIGIN: ${ORIGIN:-http://localhost:8080}
+      RP_ID: ${RP_ID:-localhost}
+      PASSWORD_LOGIN: 1
+      ALLOW_GUEST: 0
+      EXERCISE_MEDIA: "off"
     volumes:
-      - ./data:/data   # FAÇA BACKUP DESTA PASTA: contas e treinos dos alunos
+      - ./data/opengym:/data   # BACKUP: contas e treinos
 
-  # App do aluno com a marca da academia, servindo /api do mesmo endereço.
+  # Servidor da academia: marca, equipe, fichas do professor, aulas, avaliações, ranking.
+  hub:
+    build: ./server/hub
+    restart: unless-stopped
+    environment:
+      <<: *tz
+      OPENGYM_URL: http://api:3000
+      SETUP_CODE: ${SETUP_CODE:?Defina SETUP_CODE no arquivo .env}
+      GYM_NAME: ${GYM_NAME:-Minha Academia}
+      GYM_COLOR: ${GYM_COLOR:-#DC2626}
+      GYM_LANG: ${GYM_LANG:-pt-BR}
+      GYM_CODE: ${GYM_CODE:-ACADEMIA}
+    volumes:
+      - ./data/hub:/data       # BACKUP: marca, equipe, aulas, avaliações
+    depends_on:
+      - api
+
+  # App (PWA) que os alunos instalam. A marca vem do servidor da academia.
   web:
     build:
       context: .
       args:
-        # titan = Gimnasio Titán (Paraguai, espanhol) | forcaTotal = Força Total (Brasil)
         VITE_BRAND: ${BRAND:-forcaTotal}
     restart: unless-stopped
     depends_on:
       - api
+      - hub
     ports:
       - "${WEB_PORT:-8080}:80"

@@ -166,6 +166,7 @@ export interface GroupClass {
   time: string; // "18:30"
   durationMin: number;
   teacherId: string;
+  teacherName?: string;
   room: Bilingual;
   capacity: number;
   color: string;
@@ -182,6 +183,7 @@ export interface BodyAssessment {
   id: string;
   studentId: string;
   teacherId: string;
+  teacherName?: string;
   date: string; // AAAA-MM-DD
   weightKg: number;
   bodyFatPct: number;

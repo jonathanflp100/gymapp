@@ -1,0 +1,52 @@
+# Uma academia do SaaS. Não suba este arquivo direto: use scripts/nova-academia.sh,
+# que cria tenants/<academia>/.env e sobe com:
+#   docker compose -p gym-<academia> --env-file tenants/<academia>/.env -f academia.compose.yml up -d
+services:
+  api:
+    image: gymapp-opengym-api:v1.4.4
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      PORT: 3000
+      DATA_DIR: /data
+      TRUST_PROXY: 1
+      ORIGIN: https://${DOMAIN}
+      RP_ID: ${DOMAIN}
+      PASSWORD_LOGIN: 1
+      ALLOW_GUEST: 0
+      EXERCISE_MEDIA: "off"
+    volumes:
+      - ${TENANT_DIR}/data/opengym:/data
+    networks: [internal]
+
+  hub:
+    image: gymapp-hub:latest
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      OPENGYM_URL: http://api:3000
+      SETUP_CODE: ${SETUP_CODE}
+      GYM_NAME: ${GYM_NAME}
+      GYM_LANG: ${GYM_LANG}
+      GYM_CODE: ${GYM_CODE}
+      GYM_COLOR: ${GYM_COLOR}
+    volumes:
+      - ${TENANT_DIR}/data/hub:/data
+    networks: [internal]
+    depends_on: [api]
+
+  web:
+    image: gymapp-web:latest
+    restart: unless-stopped
+    container_name: gym-${SLUG}-web
+    networks:
+      internal:
+        aliases: [web]
+      gymnet: {}
+    depends_on: [api, hub]
+
+networks:
+  internal: {}
+  gymnet:
+    external: true
+    name: gymnet

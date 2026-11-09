@@ -1,18 +1,20 @@
 import React from 'react';
-import { Sliders, User, Dumbbell, ShieldCheck } from 'lucide-react';
+import { Sliders, User, Dumbbell, ShieldCheck, Settings } from 'lucide-react';
 import { useBrand } from '../../context/BrandContext';
 import { useAuth } from '../../context/AuthContext';
+import { REAL_BACKEND } from '../../services/openGymBackend';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   onOpenDemo: () => void;
   onOpenProfile?: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenDemo, onOpenProfile }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenDemo, onOpenProfile, onOpenSettings }) => {
   const { brand, brandLogoUrl } = useBrand();
-  const { currentUser, role } = useAuth();
+  const { currentUser, role, isOwner } = useAuth();
   const { t } = useLanguage();
 
   return (
@@ -55,6 +57,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDemo, onOpenProfile }) => 
             </button>
           )}
 
+          {isOwner && onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              aria-label="Configurações da academia"
+              className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-200 active:scale-95 transition"
+            >
+              <Settings className="w-4 h-4 text-brand-primary" />
+            </button>
+          )}
+
+          {!REAL_BACKEND && (
           <button
             type="button"
             onClick={onOpenDemo}
@@ -64,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDemo, onOpenProfile }) => 
             <Sliders className="w-3.5 h-3.5 text-brand-primary" />
             <span className="hidden xs:inline">Demo</span>
           </button>
+          )}
         </div>
       </div>
     </header>

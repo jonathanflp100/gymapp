@@ -15,7 +15,7 @@ import { useBrand } from '../../context/BrandContext';
 import { useX } from '../../i18n/extraStrings';
 
 export type StudentTab = 'home' | 'workout' | 'classes' | 'evolution' | 'history' | 'profile';
-export type TeacherTab = 'dashboard' | 'students' | 'routines' | 'classes' | 'exercises' | 'profile';
+export type TeacherTab = 'dashboard' | 'students' | 'routines' | 'classes' | 'exercises' | 'profile' | 'settings';
 export type ActiveTab = StudentTab | TeacherTab;
 
 interface BottomNavProps {

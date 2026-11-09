@@ -1,0 +1,4 @@
+tenants/
+backups/
+sites/*.caddy
+sites/*.pausado

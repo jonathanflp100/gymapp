@@ -4,8 +4,12 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 // Para desenvolver contra um openGym local: OPENGYM_URL=http://localhost:3000 npm run dev
+// e o servidor da academia: HUB_URL=http://localhost:4000 (a rota /api/hub vem antes de /api)
 const openGymProxy = process.env.OPENGYM_URL
-  ? { '/api': { target: process.env.OPENGYM_URL, changeOrigin: false } }
+  ? {
+      ...(process.env.HUB_URL ? { '/api/hub': { target: process.env.HUB_URL, changeOrigin: false } } : {}),
+      '/api': { target: process.env.OPENGYM_URL, changeOrigin: false },
+    }
   : undefined;
 
 export default defineConfig(() => {

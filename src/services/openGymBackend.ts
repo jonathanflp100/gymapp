@@ -24,6 +24,7 @@ import { toAppId, toCatalogueId } from '../data/catalogueMap';
 import { localizeDemoData } from '../data/demoLocaleEs';
 import { aggregateMuscleStimulus, calculateEpley1RM, calculateStreak } from '../utils/rules';
 import type { GymApiService } from './api';
+import { hub, HubMember } from './hub';
 
 export const REAL_BACKEND = import.meta.env.VITE_BACKEND === 'opengym';
 
@@ -341,27 +342,69 @@ function computePRs(s: OgState, lang: string): PersonalRecord[] {
   return Array.from(best.values());
 }
 
+// ---------------------------------------------------------------- sessão no servidor da academia
+
+let hubMember: HubMember | null = null;
+export const setHubMember = (m: HubMember | null) => {
+  hubMember = m;
+};
+const staff = () => hubMember?.role === 'owner' || hubMember?.role === 'teacher';
+const isMe = (id?: string) => !id || id === me?.id || id === 'me';
+
 function buildStudent(s: OgState, gymCode: string): Student {
   const weights = [...(s.bodyweight ?? [])].sort((a, b) => a.d.localeCompare(b.d));
   const workoutDates = (s.workouts ?? []).map((w) => w.d);
   const lastWorkout = [...workoutDates].sort().pop();
+  const current = weights.length ? weights[weights.length - 1].w : 0;
   return {
     id: me?.id ?? 'me',
     name: me?.name ?? 'Aluno',
     email: '',
     gymCode,
     role: 'student',
-    gender: 'O',
-    currentWeightKg: weights.length ? weights[weights.length - 1].w : 0,
-    targetWeightKg: weights.length ? weights[weights.length - 1].w : 0,
-    heightCm: 0,
-    joinDate: weights[0]?.d ?? today(),
+    gender: hubMember?.gender ?? 'O',
+    currentWeightKg: current,
+    targetWeightKg: hubMember?.targetWeightKg || current,
+    heightCm: hubMember?.heightCm ?? 0,
+    joinDate: hubMember?.joinedAt?.slice(0, 10) ?? weights[0]?.d ?? today(),
     currentStreakDays: calculateStreak(workoutDates),
     lastWorkoutDate: lastWorkout,
     activeRoutineId: s.routines?.[0]?.id,
     teacherId: '',
-    plan: 'Mensal',
-    status: 'active',
+    plan: (hubMember?.plan as Student['plan']) ?? 'Mensal',
+    status: hubMember?.status ?? 'active',
+  };
+}
+
+function memberToStudent(m: HubMember, weightKg = 0): Student {
+  return {
+    id: m.id,
+    name: m.name,
+    email: '',
+    gymCode: gymCodeForStudent,
+    role: 'student',
+    gender: m.gender ?? 'O',
+    currentWeightKg: weightKg,
+    targetWeightKg: m.targetWeightKg ?? weightKg,
+    heightCm: m.heightCm ?? 0,
+    joinDate: m.joinedAt.slice(0, 10),
+    currentStreakDays: m.stats.streak,
+    lastWorkoutDate: m.stats.lastWorkoutAt ?? undefined,
+    teacherId: '',
+    plan: (m.plan as Student['plan']) ?? 'Mensal',
+    status: m.status,
+  };
+}
+
+function memberToTeacher(m: HubMember): Teacher {
+  return {
+    id: m.id,
+    name: m.name,
+    email: '',
+    gymCode: gymCodeForStudent,
+    role: 'teacher',
+    specialty: m.role === 'owner' ? 'Administrador' : 'Professor',
+    phone: '',
   };
 }
 
@@ -372,35 +415,69 @@ export const setRealGymCode = (code: string) => {
   gymCodeForStudent = code;
 };
 
+/** Fichas da academia (criadas pela equipe) que valem para este aluno. */
+async function hubRoutinesSafe(): Promise<Routine[]> {
+  try {
+    return await hub.routines();
+  } catch {
+    return [];
+  }
+}
+
 export const openGymApi: GymApiService = {
   async getStudents() {
+    if (staff()) {
+      const list = await hub.members();
+      return list.filter((m) => m.role === 'student').map((m) => memberToStudent(m));
+    }
     return me ? [buildStudent(await state(), gymCodeForStudent)] : [];
   },
   async getStudentById(id) {
-    return me && id === me.id ? buildStudent(await state(), gymCodeForStudent) : null;
+    if (me && isMe(id)) return buildStudent(await state(), gymCodeForStudent);
+    if (!staff()) return null;
+    try {
+      const [m, assessments] = await Promise.all([hub.member(id), hub.assessments(id)]);
+      return memberToStudent(m, assessments[assessments.length - 1]?.weightKg ?? 0);
+    } catch {
+      return null;
+    }
   },
-  async updateStudent(id) {
-    return buildStudent(await state(), gymCodeForStudent);
+  async updateStudent(id, updates) {
+    if (hubMember) {
+      const target = isMe(id) ? hubMember.id : id;
+      const m = await hub.updateMember(target, updates as Partial<HubMember>);
+      if (isMe(id)) hubMember = { ...hubMember, ...m };
+    }
+    return isMe(id) ? buildStudent(await state(), gymCodeForStudent) : ((await this.getStudentById(id)) as Student);
   },
 
-  // O openGym ainda não tem papel de professor (previsto na v1.4.10).
   async getTeachers(): Promise<Teacher[]> {
-    return [];
+    if (!staff()) return [];
+    const list = await hub.members();
+    return list.filter((m) => m.role !== 'student').map(memberToTeacher);
   },
-  async getTeacherById() {
+  async getTeacherById(id) {
+    if (hubMember && hubMember.id === id && staff()) return memberToTeacher(hubMember);
     return null;
   },
 
   async getRoutines() {
+    if (staff()) return hub.routines();
     const s = await state();
-    return (s.routines ?? []).map((r) => routineFromOg(r, s, me?.id ?? 'me'));
+    const own = (s.routines ?? []).map((r) => routineFromOg(r, s, me?.id ?? 'me'));
+    const fromGym = (await hubRoutinesSafe()).map((r) => ({
+      ...r,
+      exercises: r.exercises.map((e) => ({ ...e, previousWeightKg: lastWeightFor(s, toCatalogueId(e.exerciseId)) })),
+    }));
+    // Fichas do professor primeiro
+    return [...fromGym, ...own];
   },
   async getRoutineById(id) {
-    const s = await state();
-    const r = (s.routines ?? []).find((x) => x.id === id);
-    return r ? routineFromOg(r, s, me?.id ?? 'me') : null;
+    const all = await this.getRoutines(me?.id);
+    return all.find((r) => r.id === id) ?? null;
   },
   async saveRoutine(data) {
+    if (staff()) return hub.saveRoutine(data as Partial<Routine>);
     const routine: Routine = { ...data, id: data.id || `gx-${Date.now()}`, updatedAt: today() };
     await mutate((doc) => {
       const list = doc.routines ?? [];
@@ -413,12 +490,18 @@ export const openGymApi: GymApiService = {
     return routine;
   },
   async deleteRoutine(id) {
+    if (staff()) {
+      await hub.deleteRoutine(id);
+      return true;
+    }
     await mutate((doc) => {
       doc.routines = (doc.routines ?? []).filter((r) => r.id !== id);
     });
     return true;
   },
-  async assignRoutine() {
+  async assignRoutine(routineId, studentIds) {
+    if (!staff()) return false;
+    await hub.assign(routineId, studentIds);
     return true;
   },
 
@@ -447,7 +530,8 @@ export const openGymApi: GymApiService = {
     return ex;
   },
 
-  async getWorkoutHistory() {
+  async getWorkoutHistory(studentId) {
+    if (!isMe(studentId)) return staff() ? hub.activity(studentId) : [];
     const s = await state();
     const lang = currentLang();
     return (s.workouts ?? [])
@@ -491,10 +575,22 @@ export const openGymApi: GymApiService = {
     await mutate((doc) => {
       doc.workouts = [...(doc.workouts ?? []), workout];
     });
-    return { ...data, id: workout.id, personalRecordsBroken: prNames.length ? prNames : undefined };
+    const result: WorkoutHistoryEntry = {
+      ...data,
+      id: workout.id,
+      studentId: me?.id ?? data.studentId,
+      personalRecordsBroken: prNames.length ? prNames : undefined,
+    };
+    // Resumo para o professor acompanhar (não bloqueia o aluno se o hub falhar)
+    hub.postActivity(result).catch(() => undefined);
+    return result;
   },
 
-  async getWeightHistory() {
+  async getWeightHistory(studentId) {
+    if (!isMe(studentId)) {
+      if (!staff()) return [];
+      return (await hub.assessments(studentId)).map((a) => ({ date: a.date, weightKg: a.weightKg }));
+    }
     const s = await state();
     return [...(s.bodyweight ?? [])]
       .sort((a, b) => a.d.localeCompare(b.d))
@@ -509,11 +605,12 @@ export const openGymApi: GymApiService = {
     });
     return { date: d, weightKg };
   },
-  async getPersonalRecords() {
+  async getPersonalRecords(studentId) {
+    if (!isMe(studentId)) return [];
     return computePRs(await state(), currentLang());
   },
-  async getWeeklyMuscleStimulus(): Promise<Record<MuscleGroup, MuscleFatigueScore>> {
-    const history = await this.getWorkoutHistory('');
+  async getWeeklyMuscleStimulus(studentId): Promise<Record<MuscleGroup, MuscleFatigueScore>> {
+    const history = await this.getWorkoutHistory(studentId);
     const since = Date.now() - 7 * 86400000;
     return aggregateMuscleStimulus(history.filter((h) => Date.parse(h.startedAt) >= since));
   },

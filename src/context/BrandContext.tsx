@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrandConfig } from '../types';
 import { BRAND_PRESETS, DEFAULT_BRAND, applyBrandTheme, generateBrandLogoSvg } from '../config/brand';
 import { useLanguage } from '../i18n/LanguageContext';
+import { REAL_BACKEND } from '../services/openGymBackend';
+import { hub } from '../services/hub';
 
 interface BrandContextType {
   brand: BrandConfig;
@@ -10,6 +12,10 @@ interface BrandContextType {
   updateBrand: (updates: Partial<BrandConfig>) => void;
   resetBrand: () => void;
   brandLogoUrl: string;
+  /** Salva a marca: no servidor (modo completo) ou no aparelho (demo). */
+  saveBrand: (updates: Partial<BrandConfig>) => Promise<void>;
+  /** Modo completo: true até a marca do servidor chegar. */
+  brandLoading: boolean;
 }
 
 const BrandContext = createContext<BrandContextType | null>(null);
@@ -19,6 +25,27 @@ const PRESET_KEY = 'gymapp_active_preset_name';
 
 export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { setLanguage } = useLanguage();
+  const [brandLoading, setBrandLoading] = useState(REAL_BACKEND);
+
+  // Modo completo: a marca da academia vem do servidor
+  useEffect(() => {
+    if (!REAL_BACKEND) return;
+    hub
+      .settings()
+      .then((remote) => {
+        setBrandState({ ...DEFAULT_BRAND, ...remote });
+        let chosen: string | null = null;
+        try {
+          chosen = localStorage.getItem('gymapp_preferred_language');
+        } catch {
+          /* ignora */
+        }
+        if (!chosen && remote.defaultLanguage) setLanguage(remote.defaultLanguage);
+      })
+      .catch((err) => console.warn('Não foi possível carregar a marca da academia:', err))
+      .finally(() => setBrandLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [activePresetKey, setActivePresetKey] = useState<'forcaTotal' | 'titan' | 'custom'>(() => {
     if (typeof window !== 'undefined') {
@@ -30,7 +57,7 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [brand, setBrandState] = useState<BrandConfig>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(BRAND_STORAGE_KEY);
+      const saved = REAL_BACKEND ? null : localStorage.getItem(BRAND_STORAGE_KEY);
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -71,7 +98,10 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         const stringManifest = JSON.stringify(manifestData);
         const blob = new Blob([stringManifest], { type: 'application/json' });
-        const manifestUrl = URL.createObjectURL(blob);
+        // Modo completo: manifest e ícone servidos pelo servidor da academia (instalação do PWA com a logo dela)
+        const version = encodeURIComponent((brand as BrandConfig & { updatedAt?: string }).updatedAt || '1');
+        const manifestUrl = REAL_BACKEND ? `/api/hub/manifest.webmanifest?v=${version}` : URL.createObjectURL(blob);
+        const iconUrl = REAL_BACKEND ? `/api/hub/icon?v=${version}` : brand.logoUrl || generateBrandLogoSvg(brand);
 
         let manifestLink = document.getElementById('dynamic-manifest') as HTMLLinkElement | null;
         if (manifestLink) {
@@ -80,12 +110,12 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         let faviconLink = document.getElementById('dynamic-favicon') as HTMLLinkElement | null;
         if (faviconLink) {
-          faviconLink.setAttribute('href', generateBrandLogoSvg(brand));
+          faviconLink.setAttribute('href', iconUrl);
         }
 
         let appleLink = document.getElementById('dynamic-apple-icon') as HTMLLinkElement | null;
         if (appleLink) {
-          appleLink.setAttribute('href', generateBrandLogoSvg(brand));
+          appleLink.setAttribute('href', iconUrl);
         }
       } catch (e) {
         console.warn('Could not inject dynamic manifest:', e);
@@ -114,6 +144,15 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const saveBrand = async (updates: Partial<BrandConfig>) => {
+    if (REAL_BACKEND) {
+      const saved = await hub.saveSettings(updates);
+      setBrandState({ ...DEFAULT_BRAND, ...saved });
+      return;
+    }
+    updateBrand(updates);
+  };
+
   const resetBrand = () => {
     setPreset('forcaTotal');
   };
@@ -129,6 +168,8 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateBrand,
         resetBrand,
         brandLogoUrl,
+        saveBrand,
+        brandLoading,
       }}
     >
       {children}

@@ -1,0 +1,30 @@
+# GymApp SaaS — proxy de entrada (Caddy) para todas as academias desta VPS.
+# HTTPS automático (Let's Encrypt) para cada domínio/subdomínio cadastrado.
+# Sobe uma vez com:  ./scripts/instalar.sh
+name: gymapp-proxy
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-voce@exemplo.com}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - gymnet
+
+networks:
+  gymnet:
+    name: gymnet
+
+volumes:
+  caddy_data:
+  caddy_config:

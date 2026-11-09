@@ -17,6 +17,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
 import { api } from '../../services/api';
+import { REAL_BACKEND } from '../../services/openGymBackend';
+import { ClaimOwnerCard } from '../../components/common/ClaimOwnerCard';
 import { Student, SupportedLanguage } from '../../types';
 
 export const ProfileView: React.FC = () => {
@@ -208,6 +210,8 @@ export const ProfileView: React.FC = () => {
           <span>{t('profile.contactGym')}</span>
         </a>
       </div>
+
+      {REAL_BACKEND && role === 'student' && <ClaimOwnerCard />}
 
       {/* Logout Button */}
       <button
