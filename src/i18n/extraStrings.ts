@@ -79,9 +79,8 @@ const pt = {
     primary: 'Principal',
     secondary: 'Auxiliares',
     rest: 'Descanso sugerido',
-    video: 'Vídeo da execução',
-    videoNote: (gym: string) => `Aqui entra o vídeo gravado pela equipe da ${gym}`,
-    tempo: 'Cadência: 2s descendo · 1s subindo',
+    video: 'Cadência do movimento',
+    tempo: '2s descendo · 1s subindo · toque para pausar',
     equipment: {
       barbell: 'Barra',
       dumbbell: 'Halteres',
@@ -268,9 +267,8 @@ const es: Strings = {
     primary: 'Principal',
     secondary: 'Auxiliares',
     rest: 'Descanso sugerido',
-    video: 'Video de la ejecución',
-    videoNote: (gym: string) => `Acá va el video grabado por el equipo de ${gym}`,
-    tempo: 'Cadencia: 2s bajando · 1s subiendo',
+    video: 'Cadencia del movimiento',
+    tempo: '2s bajando · 1s subiendo · tocá para pausar',
     equipment: {
       barbell: 'Barra',
       dumbbell: 'Mancuernas',

@@ -98,14 +98,14 @@ const Chip: React.FC<{ children: React.ReactNode; strong?: boolean }> = ({ child
 );
 
 /**
- * Área de vídeo. Se a academia tiver vídeo próprio (videoUrl), toca ele.
- * Senão mostra um guia animado de cadência no lugar do vídeo.
+ * Se a academia tiver vídeo próprio do exercício (videoUrl), toca o vídeo.
+ * Senão mostra a animação de cadência do movimento, sem aviso de vídeo.
  */
 const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
   const { brand } = useBrand();
   const x = useX();
   const url = EXERCISE_GUIDES[exercise.id]?.videoUrl;
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [reps, setReps] = useState(0);
 
   useEffect(() => {
@@ -166,8 +166,7 @@ const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
       </button>
 
       <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent">
-        <div className="text-[11px] font-bold text-white">{x.guide.videoNote(brand.name)}</div>
-        <div className="text-[10px] text-white/75">{x.guide.tempo}</div>
+        <div className="text-[11px] font-bold text-white">{x.guide.tempo}</div>
       </div>
     </div>
   );
