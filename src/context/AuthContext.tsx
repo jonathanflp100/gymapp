@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Student, Teacher, UserRole } from '../types';
 import { api } from '../services/api';
 import { useBrand } from './BrandContext';
@@ -39,7 +39,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   // Restore session or bootstrap default demo student
+  // Conta os logins feitos na demo: se o usuário trocar (ex.: escolheu outra academia) enquanto a
+  // inicialização ainda carrega, a inicialização não sobrescreve a troca.
+  const loginSeq = useRef(0);
+
   useEffect(() => {
+    const seq = loginSeq.current;
+    const initialId = localStorage.getItem(AUTH_USER_KEY);
+    const stale = () => loginSeq.current !== seq || localStorage.getItem(AUTH_USER_KEY) !== initialId;
     async function initAuth() {
       if (REAL_BACKEND) {
         try {
@@ -58,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (savedId && savedRole) {
           if (savedRole === 'student') {
             const student = await api.getStudentById(savedId);
+            if (stale()) return;
             if (student) {
               setCurrentUser(student);
               setRole('student');
@@ -66,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } else if (savedRole === 'teacher') {
             const teacher = await api.getTeacherById(savedId);
+            if (stale()) return;
             if (teacher) {
               setCurrentUser(teacher);
               setRole('teacher');
@@ -78,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Default demo student matching current brand
         const students = await api.getStudents(brand.gymCode);
         const defaultStudent = students[0] || (await api.getStudents())[0];
+        if (stale()) return;
         if (defaultStudent) {
           setCurrentUser(defaultStudent);
           setRole('student');
@@ -128,6 +138,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const quickLoginAsStudent = async (studentId?: string) => {
+    loginSeq.current++;
+    if (studentId) {
+      localStorage.setItem(AUTH_USER_KEY, studentId);
+      localStorage.setItem(AUTH_ROLE_KEY, 'student');
+    }
     const students = await api.getStudents();
     let target = students[0];
     if (studentId) {
@@ -147,6 +162,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const quickLoginAsTeacher = async (teacherId?: string) => {
+    loginSeq.current++;
+    if (teacherId) {
+      localStorage.setItem(AUTH_USER_KEY, teacherId);
+      localStorage.setItem(AUTH_ROLE_KEY, 'teacher');
+    }
     const teachers = await api.getTeachers();
     let target = teachers[0];
     if (teacherId) {
@@ -221,6 +241,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     if (REAL_BACKEND) void openGymAuth.logout();
+    // apaga do aparelho os dados da conta guardados para uso sem internet
+    try {
+      navigator.serviceWorker?.controller?.postMessage('clear-api-cache');
+      localStorage.removeItem('gymapp.activeWorkout');
+    } catch {
+      /* sem service worker */
+    }
     setCurrentUser(null);
     setRole(null);
     localStorage.removeItem(AUTH_USER_KEY);

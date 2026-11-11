@@ -9,6 +9,8 @@
  * Ativado quando o app é compilado com VITE_BACKEND=opengym.
  */
 import {
+  RoutineExercise,
+  SetLog,
   Exercise,
   MuscleGroup,
   MuscleFatigueScore,
@@ -23,7 +25,7 @@ import { MOCK_EXERCISES, MOCK_ROUTINES } from '../data/mockData';
 import { toAppId, toCatalogueId } from '../data/catalogueMap';
 import { localizeDemoData } from '../data/demoLocaleEs';
 import { searchExercises, loadCatalogue, getCatalogueExercise, isCatalogueId } from './catalogue';
-import { aggregateMuscleStimulus, calculateEpley1RM, calculateStreak } from '../utils/rules';
+import { aggregateMuscleStimulus, calculateEpley1RM, calculateStreak, recount } from '../utils/rules';
 import type { GymApiService } from './api';
 import { hub, HubMember } from './hub';
 
@@ -31,15 +33,17 @@ export const REAL_BACKEND = import.meta.env.VITE_BACKEND === 'opengym';
 
 // ---------------------------------------------------------------- tipos openGym
 
-interface OgSet { w: number; r: number; done?: boolean }
+interface OgSet { w: number; r: number; done?: boolean; t?: 'warmup' | 'drop'; s?: number }
 interface OgEntry { id: string; topW?: number | null; sets: OgSet[] }
 interface OgWorkout {
   id: string; d: string; start: number; end: number; routineId?: string; name: string;
-  vol?: number; prs?: string[]; entries: OgEntry[]; _ts?: number;
+  vol?: number; prs?: string[]; entries: OgEntry[]; _ts?: number; manual?: boolean;
 }
 interface OgRoutineEx {
   id: string; sets: number; reps: number; repsMax?: number; weight: number;
   mode: 'reps'; restSec?: number; note?: string;
+  // extras do GymApp: tipo, técnica, aquecimento, bi-set, substituto e progressão
+  gxe?: Partial<Pick<RoutineExercise, 'kind' | 'durationSec' | 'technique' | 'warmupSets' | 'groupWithNext' | 'alternativeId' | 'progression' | 'incrementKg'>>;
 }
 interface OgRoutine {
   id: string; name: string; ex: OgRoutineEx[]; _ts?: number;
@@ -203,6 +207,13 @@ function parseReps(reps: string): { reps: number; repsMax?: number } {
   return { reps: Number.isFinite(a) ? a : 10, repsMax: Number.isFinite(b) ? b : undefined };
 }
 
+function advancedOf(e: RoutineExercise): OgRoutineEx['gxe'] | undefined {
+  const keys = ['kind', 'durationSec', 'technique', 'warmupSets', 'groupWithNext', 'alternativeId', 'progression', 'incrementKg'] as const;
+  const out: Record<string, unknown> = {};
+  for (const k of keys) if (e[k] !== undefined && e[k] !== '' && e[k] !== false) out[k] = e[k];
+  return Object.keys(out).length ? (out as OgRoutineEx['gxe']) : undefined;
+}
+
 function routineToOg(r: Routine): OgRoutine {
   return {
     id: r.id,
@@ -219,6 +230,7 @@ function routineToOg(r: Routine): OgRoutine {
         mode: 'reps' as const,
         restSec: e.restSeconds,
         ...(e.notes ? { note: e.notes } : {}),
+        ...(advancedOf(e) ? { gxe: advancedOf(e) } : {}),
       };
     }),
     gx: {
@@ -234,7 +246,7 @@ function lastWeightFor(s: OgState, catalogueId: string): number | undefined {
   const workouts = s.workouts ?? [];
   for (let i = workouts.length - 1; i >= 0; i--) {
     const entry = workouts[i].entries?.find((e) => e.id === catalogueId);
-    const done = entry?.sets?.filter((x) => x.done !== false && x.w > 0);
+    const done = entry?.sets?.filter((x) => x.done !== false && x.w > 0 && x.t !== 'warmup');
     if (done && done.length) return Math.max(...done.map((x) => x.w));
   }
   return undefined;
@@ -252,6 +264,7 @@ function routineFromOg(r: OgRoutine, s: OgState, studentId: string): Routine {
       restSeconds: e.restSec ?? lookup(appId)?.defaultRestSeconds ?? 90,
       notes: e.note,
       previousWeightKg: lastWeightFor(s, e.id),
+      ...(e.gxe ?? {}),
     };
   });
   const muscles =
@@ -276,6 +289,53 @@ function exerciseName(appId: string, lang: string): string {
   return lang === 'es-PY' ? ex.name['es-PY'] : ex.name['pt-BR'];
 }
 
+function setToOg(x: SetLog): OgSet {
+  return {
+    w: x.weightKg,
+    r: x.reps,
+    done: x.completed,
+    ...(x.type && x.type !== 'work' ? { t: x.type } : {}),
+    ...(x.durationSec ? { s: x.durationSec } : {}),
+  };
+}
+
+function toOgWorkout(
+  data: Omit<WorkoutHistoryEntry, 'id'>,
+  before: PersonalRecord[],
+  id?: string,
+  keepPrs?: string[]
+): { workout: OgWorkout; prNames: string[] } {
+  const bestBefore = new Map(before.map((p) => [p.exerciseId, p.maxWeightKg]));
+  const prIds: string[] = [];
+  const prNames: string[] = [];
+  const entries: OgEntry[] = data.exercises.map((e) => {
+    const done = e.sets.filter((x) => x.completed && x.weightKg > 0 && x.type !== 'warmup');
+    const top = done.length ? Math.max(...done.map((x) => x.weightKg)) : null;
+    if (top && top > (bestBefore.get(e.exerciseId) ?? 0) && bestBefore.has(e.exerciseId)) {
+      prIds.push(toCatalogueId(e.exerciseId));
+      prNames.push(e.exerciseName);
+    }
+    return { id: toCatalogueId(e.exerciseId), topW: top, sets: e.sets.map(setToOg) };
+  });
+  const start = Date.parse(data.startedAt) || Date.now();
+  const end = Date.parse(data.completedAt) || Date.now();
+  return {
+    workout: {
+      id: id ?? `gx-${end.toString(36)}`,
+      d: localDay(end),
+      start,
+      end,
+      routineId: data.routineId,
+      name: data.routineName,
+      vol: Math.round(data.totalVolumeKg),
+      prs: keepPrs ?? prIds,
+      entries,
+      ...(data.manual ? { manual: true } : {}),
+    },
+    prNames,
+  };
+}
+
 function workoutFromOg(w: OgWorkout, studentId: string, lang: string): WorkoutHistoryEntry {
   const exercises = (w.entries ?? []).map((e) => {
     const appId = toAppId(e.id);
@@ -287,6 +347,8 @@ function workoutFromOg(w: OgWorkout, studentId: string, lang: string): WorkoutHi
         weightKg: x.w ?? 0,
         reps: x.r ?? 0,
         completed: x.done !== false,
+        ...(x.t ? { type: x.t } : {}),
+        ...(x.s ? { durationSec: x.s } : {}),
       })),
     };
   });
@@ -310,6 +372,7 @@ function workoutFromOg(w: OgWorkout, studentId: string, lang: string): WorkoutHi
     muscleGroups: muscles,
     exercises,
     personalRecordsBroken: (w.prs ?? []).map((id) => exerciseName(toAppId(id), lang)),
+    ...(w.manual ? { manual: true } : {}),
   };
 }
 
@@ -326,7 +389,7 @@ function computePRs(s: OgState, lang: string): PersonalRecord[] {
   for (const w of s.workouts ?? []) {
     for (const e of w.entries ?? []) {
       for (const x of e.sets ?? []) {
-        if (x.done === false || !x.w) continue;
+        if (x.done === false || !x.w || x.t === 'warmup') continue;
         const appId = toAppId(e.id);
         const prev = best.get(appId);
         if (!prev || x.w > prev.maxWeightKg) {
@@ -537,37 +600,7 @@ export const openGymApi: GymApiService = {
 
   async finishWorkout(data) {
     const before = computePRs(await state(), currentLang());
-    const bestBefore = new Map(before.map((p) => [p.exerciseId, p.maxWeightKg]));
-    const prIds: string[] = [];
-    const prNames: string[] = [];
-
-    const entries: OgEntry[] = data.exercises.map((e) => {
-      const done = e.sets.filter((x) => x.completed && x.weightKg > 0);
-      const top = done.length ? Math.max(...done.map((x) => x.weightKg)) : null;
-      if (top && top > (bestBefore.get(e.exerciseId) ?? 0) && bestBefore.has(e.exerciseId)) {
-        prIds.push(toCatalogueId(e.exerciseId));
-        prNames.push(e.exerciseName);
-      }
-      return {
-        id: toCatalogueId(e.exerciseId),
-        topW: top,
-        sets: e.sets.map((x) => ({ w: x.weightKg, r: x.reps, done: x.completed })),
-      };
-    });
-
-    const start = Date.parse(data.startedAt) || Date.now();
-    const end = Date.parse(data.completedAt) || Date.now();
-    const workout: OgWorkout = {
-      id: `gx-${end.toString(36)}`,
-      d: localDay(end),
-      start,
-      end,
-      routineId: data.routineId,
-      name: data.routineName,
-      vol: Math.round(data.totalVolumeKg),
-      prs: prIds,
-      entries,
-    };
+    const { workout, prNames } = toOgWorkout(data, before);
     await mutate((doc) => {
       doc.workouts = [...(doc.workouts ?? []), workout];
     });
@@ -580,6 +613,27 @@ export const openGymApi: GymApiService = {
     // Resumo para o professor acompanhar (não bloqueia o aluno se o hub falhar)
     hub.postActivity(result).catch(() => undefined);
     return result;
+  },
+
+  async updateWorkout(entry) {
+    const fixed = recount(entry);
+    const s = await state();
+    const others = { ...s, workouts: (s.workouts ?? []).filter((w) => w.id !== entry.id) };
+    const old = (s.workouts ?? []).find((w) => w.id === entry.id);
+    const { workout } = toOgWorkout(fixed, computePRs(others, currentLang()), entry.id, old?.prs);
+    await mutate((doc) => {
+      doc.workouts = (doc.workouts ?? []).map((w) => (w.id === entry.id ? workout : w));
+    });
+    hub.updateActivity(fixed).catch(() => undefined);
+    return fixed;
+  },
+
+  async deleteWorkout(id) {
+    await mutate((doc) => {
+      doc.workouts = (doc.workouts ?? []).filter((w) => w.id !== id);
+    });
+    hub.deleteActivity(id).catch(() => undefined);
+    return true;
   },
 
   async getWeightHistory(studentId) {

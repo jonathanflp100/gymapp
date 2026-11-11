@@ -15,11 +15,23 @@ export const ExercisePicker: React.FC<{
   value: string;
   exercises: Exercise[];
   onChange: (id: string) => void;
-}> = ({ value, exercises, onChange }) => {
+  /** texto quando nada está escolhido */
+  placeholder?: string;
+  /** controle externo (ex.: troca de exercício durante o treino, sem botão) */
+  open?: boolean;
+  onClose?: () => void;
+  initialMuscle?: MuscleGroup;
+}> = ({ value, exercises, onChange, placeholder, open: openProp, onClose, initialMuscle }) => {
   const { language, t } = useLanguage();
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openState;
+  const setOpen = (v: boolean) => (controlled ? !v && onClose?.() : setOpenState(v));
   const [query, setQuery] = useState('');
-  const [muscle, setMuscle] = useState<MuscleGroup | 'all'>('all');
+  const [muscle, setMuscle] = useState<MuscleGroup | 'all'>(initialMuscle ?? 'all');
+  useEffect(() => {
+    if (open && initialMuscle) setMuscle(initialMuscle);
+  }, [open, initialMuscle]);
   const [limit, setLimit] = useState(PAGE);
   const current = exercises.find((e) => e.id === value);
   const name = (e: Exercise) => e.name[language] || e.name['pt-BR'];
@@ -40,16 +52,20 @@ export const ExercisePicker: React.FC<{
 
   return (
     <>
+      {!controlled && (
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white font-semibold flex items-center justify-between gap-2 text-left"
       >
         <span className="truncate">
-          {current ? `${name(current)} (${t(`muscles.${current.muscleGroup}`)})` : es ? 'Elegir ejercicio' : 'Escolher exercício'}
+          {current
+            ? `${name(current)} (${t(`muscles.${current.muscleGroup}`)})`
+            : placeholder ?? (es ? 'Elegir ejercicio' : 'Escolher exercício')}
         </span>
         <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
       </button>
+      )}
 
       <Sheet
         open={open}

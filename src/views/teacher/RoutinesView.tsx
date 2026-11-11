@@ -11,7 +11,13 @@ import {
   X,
   Save,
   AlertCircle,
+  LayoutTemplate,
+  Printer,
 } from 'lucide-react';
+import { useX } from '../../i18n/extraStrings';
+import { AdvancedExerciseSettings } from '../../components/routine/AdvancedExerciseSettings';
+import { TemplatesSheet } from '../../components/routine/TemplatesSheet';
+import { printHtml, routineSheetHtml } from '../../services/print';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
 import { useAuth } from '../../context/AuthContext';
@@ -46,6 +52,15 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
   const [formExercises, setFormExercises] = useState<RoutineExercise[]>([]);
   const [formStudentIds, setFormStudentIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const x = useX();
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const lang = language === 'es-PY' ? 'es-PY' : 'pt-BR';
+  const printRoutine = (routine: Routine) =>
+    printHtml(
+      routineSheetHtml(routine, exercisesCatalog, lang, x.pro, { teacher: currentUser?.name }),
+      routine.name,
+      brand
+    );
 
   const loadData = async () => {
     const [allRoutines, allExercises, allStudents] = await Promise.all([
@@ -206,6 +221,31 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
         </button>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setTemplatesOpen(true)}
+        className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left"
+      >
+        <span className="w-10 h-10 rounded-xl bg-brand-primary-subtle text-brand-primary flex items-center justify-center shrink-0">
+          <LayoutTemplate className="w-5 h-5" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-black text-white">{x.pro.templates}</span>
+          <span className="block text-[11px] text-slate-400">{x.pro.templatesHint}</span>
+        </span>
+      </button>
+      <TemplatesSheet
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        teacherId={currentUser?.id || 'teacher-1'}
+        exercises={exercisesCatalog}
+        onCreated={async (n) => {
+          await loadData();
+          setToastMessage(x.pro.tplCreated(n));
+          setTimeout(() => setToastMessage(null), 3000);
+        }}
+      />
+
       {/* Routines Cards List */}
       <div className="space-y-4">
         {routines.map((routine) => {
@@ -227,6 +267,15 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
                 </div>
 
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => printRoutine(routine)}
+                    className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                    aria-label={x.pro.print}
+                    title={x.pro.print}
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => openEditModal(routine)}
@@ -334,13 +383,13 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
 
                 <div className="col-span-2">
                   <label className="text-xs font-bold text-slate-300 block mb-1">
-                    Descrição / Objetivo
+                    {language === 'es-PY' ? 'Descripción / Objetivo' : 'Descrição / Objetivo'}
                   </label>
                   <input
                     type="text"
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Ex: Hipertrofia com foco em peito"
+                    placeholder={language === 'es-PY' ? 'Ej: Hipertrofia con foco en pecho' : 'Ex: Hipertrofia com foco em peito'}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
                   />
                 </div>
@@ -388,6 +437,7 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
                       </div>
 
                       {/* Sets, Reps, Load, Rest row */}
+                      {re.kind !== 'cardio' && (
                       <div className="grid grid-cols-4 gap-2">
                         <div>
                           <span className="text-[10px] text-slate-400 font-bold block mb-0.5">
@@ -406,8 +456,17 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
 
                         <div>
                           <span className="text-[10px] text-slate-400 font-bold block mb-0.5">
-                            {t('teacher.repsLabel')}
+                            {re.kind === 'time' ? x.pro.seconds : t('teacher.repsLabel')}
                           </span>
+                          {re.kind === 'time' ? (
+                            <input
+                              type="number"
+                              min="1"
+                              value={re.durationSec ?? 30}
+                              onChange={(e) => handleUpdateExerciseRow(idx, { durationSec: Math.max(1, parseInt(e.target.value) || 1) })}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-center font-bold text-white"
+                            />
+                          ) : (
                           <input
                             type="text"
                             value={re.reps}
@@ -415,11 +474,12 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
                             placeholder="8-12"
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-center font-bold text-white"
                           />
+                          )}
                         </div>
 
                         <div>
                           <span className="text-[10px] text-slate-400 font-bold block mb-0.5">
-                            Carga (kg)
+                            {x.pro.colLoad} (kg)
                           </span>
                           <input
                             type="number"
@@ -435,7 +495,7 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
 
                         <div>
                           <span className="text-[10px] text-slate-400 font-bold block mb-0.5">
-                            Descanso
+                            {x.pro.colRest} (s)
                           </span>
                           <input
                             type="number"
@@ -449,6 +509,27 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
                           />
                         </div>
                       </div>
+                      )}
+
+                      {re.kind === 'cardio' && (
+                        <div className="w-1/3">
+                          <span className="text-[10px] text-slate-400 font-bold block mb-0.5">{x.pro.minutes}</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={Math.round((re.durationSec ?? 600) / 60)}
+                            onChange={(e) => handleUpdateExerciseRow(idx, { durationSec: Math.max(1, parseInt(e.target.value) || 1) * 60 })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-center font-bold text-white"
+                          />
+                        </div>
+                      )}
+
+                      <AdvancedExerciseSettings
+                        re={re}
+                        exercises={exercisesCatalog}
+                        isLast={idx === formExercises.length - 1}
+                        onChange={(u) => handleUpdateExerciseRow(idx, u)}
+                      />
 
                       {/* Coach Notes */}
                       <input
@@ -467,7 +548,7 @@ export const RoutinesView: React.FC<RoutinesViewProps> = ({ initialCreateOpen = 
               <div>
                 <label className="text-xs font-bold text-white flex items-center gap-1.5 mb-2">
                   <Users className="w-4 h-4 text-brand-primary" />
-                  <span>{t('teacher.assignToStudents')} ({formStudentIds.length} selecionados)</span>
+                  <span>{t('teacher.assignToStudents')} ({formStudentIds.length} {language === 'es-PY' ? 'seleccionados' : 'selecionados'})</span>
                 </label>
 
                 <div className="max-h-36 overflow-y-auto space-y-1 bg-slate-950 p-2 rounded-2xl border border-slate-800">

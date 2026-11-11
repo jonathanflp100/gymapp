@@ -21,7 +21,8 @@ import {
 import { localizeDemoData } from '../data/demoLocaleEs';
 import { searchExercises, loadCatalogue, getCatalogueExercise, isCatalogueId } from './catalogue';
 import { REAL_BACKEND, openGymApi } from './openGymBackend';
-import { aggregateMuscleStimulus, isNewPersonalRecord, calculateEpley1RM } from '../utils/rules';
+import { aggregateMuscleStimulus, isNewPersonalRecord, calculateEpley1RM, calculateTotalVolume, recount } from '../utils/rules';
+export { recount };
 
 // Local storage keys to persist state across app interactions
 const STORAGE_KEYS = {
@@ -91,6 +92,9 @@ export interface GymApiService {
   // Workout Execution & History
   getWorkoutHistory(studentId: string): Promise<WorkoutHistoryEntry[]>;
   finishWorkout(workoutData: Omit<WorkoutHistoryEntry, 'id'>): Promise<WorkoutHistoryEntry>;
+  /** corrige um treino já salvo (data, cargas, reps, exercícios) */
+  updateWorkout(entry: WorkoutHistoryEntry): Promise<WorkoutHistoryEntry>;
+  deleteWorkout(id: string): Promise<boolean>;
 
   // Evolution & Stats
   getWeightHistory(studentId: string): Promise<WeightRecord[]>;
@@ -229,6 +233,23 @@ const baseApi: GymApiService = {
       .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   },
 
+  async updateWorkout(entry: WorkoutHistoryEntry): Promise<WorkoutHistoryEntry> {
+    await delay();
+    const fixed = recount(entry);
+    historyStore = historyStore
+      .map((h) => (h.id === entry.id ? fixed : h))
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    setStoredData(STORAGE_KEYS.HISTORY, historyStore);
+    return fixed;
+  },
+
+  async deleteWorkout(id: string): Promise<boolean> {
+    await delay();
+    historyStore = historyStore.filter((h) => h.id !== id);
+    setStoredData(STORAGE_KEYS.HISTORY, historyStore);
+    return true;
+  },
+
   async finishWorkout(workoutData: Omit<WorkoutHistoryEntry, 'id'>): Promise<WorkoutHistoryEntry> {
     await delay();
     const newEntry: WorkoutHistoryEntry = {
@@ -237,6 +258,7 @@ const baseApi: GymApiService = {
     };
 
     historyStore.unshift(newEntry);
+    historyStore.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     setStoredData(STORAGE_KEYS.HISTORY, historyStore);
 
     // Update student's streak and last workout date
@@ -253,9 +275,9 @@ const baseApi: GymApiService = {
     for (const ex of workoutData.exercises) {
       const maxWeightInWorkout = Math.max(
         0,
-        ...ex.sets.filter((s) => s.completed).map((s) => s.weightKg)
+        ...ex.sets.filter((s) => s.completed && s.type !== 'warmup').map((s) => s.weightKg)
       );
-      const setWithMax = ex.sets.find((s) => s.weightKg === maxWeightInWorkout && s.completed);
+      const setWithMax = ex.sets.find((s) => s.weightKg === maxWeightInWorkout && s.completed && s.type !== 'warmup');
 
       if (maxWeightInWorkout > 0 && setWithMax) {
         const existingPrIdx = prsStore.findIndex((p) => p.exerciseId === ex.exerciseId);

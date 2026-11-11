@@ -51,6 +51,12 @@ export interface Exercise {
   source?: 'curated' | 'catalogue';
 }
 
+/** reps = séries com repetições; time = segura o tempo (prancha); cardio = minutos */
+export type ExerciseKind = 'reps' | 'time' | 'cardio';
+export type SetTechnique = 'normal' | 'dropset' | 'restpause';
+/** none = repete a carga; linear = sobe a carga quando bate as reps; double = sobe as reps até o topo da faixa, depois a carga */
+export type ProgressionRule = 'none' | 'linear' | 'double';
+
 export interface RoutineExercise {
   id: string;
   exerciseId: string;
@@ -60,6 +66,17 @@ export interface RoutineExercise {
   restSeconds: number;
   notes?: string;
   previousWeightKg?: number; // Pre-filled from last completed workout
+  kind?: ExerciseKind;
+  /** segundos por série (time) ou duração total (cardio) */
+  durationSec?: number;
+  technique?: SetTechnique;
+  warmupSets?: number;
+  /** faz bi-set/tri-set com o próximo exercício (sem descanso entre eles) */
+  groupWithNext?: boolean;
+  /** exercício para trocar se a máquina estiver ocupada */
+  alternativeId?: string;
+  progression?: ProgressionRule;
+  incrementKg?: number;
 }
 
 export interface Routine {
@@ -80,6 +97,9 @@ export interface SetLog {
   reps: number;
   completed: boolean;
   isPersonalRecord?: boolean;
+  /** aquecimento e drop não contam para recorde nem para a progressão */
+  type?: 'warmup' | 'work' | 'drop';
+  durationSec?: number;
 }
 
 export interface ExerciseLog {
@@ -104,6 +124,8 @@ export interface WorkoutHistoryEntry {
     sets: SetLog[];
   }[];
   personalRecordsBroken?: string[]; // Names of exercises where PR was achieved
+  /** treino registrado depois (feito no papel) */
+  manual?: boolean;
   notes?: string;
 }
 
@@ -235,4 +257,20 @@ export interface Challenge {
 export interface CheckinStats {
   days: { date: string; count: number }[];
   today: { id: string; name: string; at: string }[];
+}
+
+/** Relatório do mês para o dono da academia */
+export interface MonthReport {
+  month: string; // YYYY-MM
+  activeStudents: number;
+  totalStudents: number;
+  newStudents: number;
+  trainedMonth: number;
+  totalWorkouts: number;
+  checkins: number;
+  busiestWeekday: number | null; // 0 = domingo
+  topStudents: { name: string; days: number }[];
+  atRisk: { name: string; days: number | null }[];
+  classes: { name: Bilingual | string; bookings: number }[];
+  challenges: { title: Bilingual | string; done: number }[];
 }

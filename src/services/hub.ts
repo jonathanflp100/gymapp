@@ -1,7 +1,7 @@
 /**
  * Cliente do servidor da academia (server/hub). Usado só no modo completo.
  */
-import type { Announcement, BodyAssessment, BrandConfig, Challenge, CheckinStats, GroupClass, Routine, WorkoutHistoryEntry } from '../types';
+import type { Announcement, BodyAssessment, BrandConfig, Challenge, CheckinStats, GroupClass, MonthReport, Routine, WorkoutHistoryEntry } from '../types';
 import type { ClassOccurrence } from './extrasApi';
 
 export type HubRole = 'owner' | 'teacher' | 'student';
@@ -36,6 +36,13 @@ export interface Ranking {
   month: string;
   rows: { position: number; id: string; name: string; days: number; isMe: boolean }[];
   me: { position: number; days: number; total: number } | null;
+}
+
+export interface ProgressPhoto {
+  id: string;
+  date: string;
+  studentId: string;
+  url: string;
 }
 
 export class HubError extends Error {
@@ -92,6 +99,8 @@ export const hub = {
   saveAssessment: (a: Omit<BodyAssessment, 'id' | 'teacherId'>) => call<BodyAssessment>('POST', '/assessments', a),
 
   postActivity: (w: WorkoutHistoryEntry) => call('POST', '/activity', w),
+  updateActivity: (w: WorkoutHistoryEntry) => call('PUT', `/activity/${encodeURIComponent(w.id)}`, w),
+  deleteActivity: (id: string) => call('DELETE', `/activity/${encodeURIComponent(id)}`),
   activity: (studentId: string) => call<WorkoutHistoryEntry[]>('GET', `/activity${q({ studentId })}`),
 
   ranking: () => call<Ranking>('GET', '/ranking'),
@@ -106,6 +115,17 @@ export const hub = {
   checkin: (code: string) => call<{ ok: boolean; already: boolean; at: string }>('POST', '/checkin', { code }),
   checkins: (studentId: string) => call<{ date: string; at: string }[]>('GET', `/checkins${q({ studentId })}`),
   checkinStats: () => call<CheckinStats>('GET', '/checkins/stats'),
+
+  pushKey: () => call<{ publicKey: string }>('GET', '/push/key'),
+  pushSubscribe: (subscription: PushSubscriptionJSON) => call<{ ok: boolean }>('POST', '/push/subscribe', { subscription }),
+  pushUnsubscribe: (endpoint: string) => call<{ ok: boolean }>('POST', '/push/unsubscribe', { endpoint }),
+  pushTest: () => call<{ sent: number }>('POST', '/push/test', {}),
+
+  report: (month: string) => call<MonthReport>('GET', `/report${q({ month })}`),
+
+  photos: (studentId = '') => call<ProgressPhoto[]>('GET', `/photos${q({ studentId })}`),
+  addPhoto: (data: string, date: string) => call<ProgressPhoto>('POST', '/photos', { data, date }),
+  deletePhoto: (id: string) => call<{ ok: boolean }>('DELETE', `/photos/${encodeURIComponent(id)}`),
 
   inventory: () => call<{ kits: string[] | null; hidden: string[] }>('GET', '/inventory'),
   saveInventory: (inv: { kits?: string[] | null; hidden?: string[] }) =>

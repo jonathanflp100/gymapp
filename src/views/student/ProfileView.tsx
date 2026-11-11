@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PushCard } from '../../components/common/PushCard';
 import {
   User,
   Globe,
@@ -87,6 +88,9 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Notificações no celular */}
+      <PushCard />
 
       {/* Body Stats & Plan (Student only) */}
       {role === 'student' && student && (

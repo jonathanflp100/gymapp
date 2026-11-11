@@ -1,4 +1,4 @@
-import { Exercise, Student, Teacher, Routine, WorkoutHistoryEntry, WeightRecord, PersonalRecord } from '../types';
+import { Exercise, Student, Teacher, Routine, WorkoutHistoryEntry, WeightRecord, PersonalRecord, RoutineExercise } from '../types';
 
 export const MOCK_EXERCISES: Exercise[] = [
   // CHEST (6)
@@ -959,3 +959,108 @@ export const MOCK_PERSONAL_RECORDS: PersonalRecord[] = [
     date: '2026-10-30',
   },
 ];
+
+// ---------------------------------------------------------------- fichas da demo com os recursos avançados
+(() => {
+  const patch = (routineId: string, exerciseId: string, extra: Partial<RoutineExercise>) => {
+    const r = MOCK_ROUTINES.find((x) => x.id === routineId);
+    const e = r?.exercises.find((x) => x.exerciseId === exerciseId);
+    if (e) Object.assign(e, extra);
+  };
+  patch('routine-a-upper', 'ex-bench-press', { warmupSets: 2, progression: 'linear', incrementKg: 2.5, alternativeId: 'ex-chest-fly-machine' });
+  patch('routine-a-upper', 'ex-incline-dumbbell-press', { progression: 'double', incrementKg: 2 });
+  patch('routine-a-upper', 'ex-overhead-press', { reps: '8-10', progression: 'linear', incrementKg: 2 });
+  patch('routine-a-upper', 'ex-lateral-raise', { groupWithNext: true });
+  patch('routine-a-upper', 'ex-triceps-rope-pushdown', { technique: 'dropset' });
+  patch('routine-b-pull', 'ex-lat-pulldown', { warmupSets: 1, progression: 'double', incrementKg: 2.5, alternativeId: 'ex-pullup' });
+  patch('routine-b-pull', 'ex-seated-cable-row', { progression: 'double', incrementKg: 2.5 });
+  patch('routine-b-pull', 'ex-barbell-curl', { technique: 'restpause' });
+  patch('routine-c-legs', 'ex-squat', { warmupSets: 2, progression: 'linear', incrementKg: 2.5, alternativeId: 'ex-leg-press-45' });
+  patch('routine-c-legs', 'ex-leg-extension', { groupWithNext: true });
+  const legs = MOCK_ROUTINES.find((x) => x.id === 'routine-c-legs');
+  if (legs && !legs.assignedStudentIds.includes('student-7')) legs.assignedStudentIds.push('student-7');
+  if (legs && !legs.exercises.some((e) => e.exerciseId === 'ex-plank')) {
+    legs.exercises.push({ id: 'rc-plank', exerciseId: 'ex-plank', sets: 3, reps: '1', targetWeightKg: 0, restSeconds: 45, kind: 'time', durationSec: 40 });
+  }
+})();
+
+// ---------------------------------------------------------------- histórico longo da demo
+// Gera ~4 meses de treinos anteriores (seg/qua/sex, alternando as fichas) com cargas
+// subindo aos poucos, para o calendário do ano e os gráficos por exercício terem o que mostrar.
+(() => {
+  const templates = [...MOCK_HISTORY].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const oldest = Date.parse(templates[0].startedAt);
+  const DAY = 86_400_000;
+  let seed = 7;
+  const rand = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  const roundTo = (w: number) => (w >= 30 ? Math.round(w / 2.5) * 2.5 : Math.round(w));
+  let k = 0;
+  const extra: WorkoutHistoryEntry[] = [];
+  for (let d = 2; d <= 125; d++) {
+    const t = oldest - d * DAY;
+    const wd = new Date(t).getDay();
+    if (![1, 3, 5].includes(wd) && !(wd === 6 && rand() < 0.3)) continue;
+    if (rand() < 0.12) continue; // faltou
+    const base = templates[k++ % templates.length];
+    const factor = 1 - 0.0022 * d;
+    const exercises = base.exercises.map((e) => ({
+      ...e,
+      sets: e.sets.map((x) => ({ ...x, weightKg: roundTo(x.weightKg * factor), isPersonalRecord: undefined })),
+    }));
+    const vol = exercises.reduce((a, e) => a + e.sets.reduce((b, x) => b + (x.completed ? x.weightKg * x.reps : 0), 0), 0);
+    extra.push({
+      ...base,
+      id: `hist-old-${d}`,
+      startedAt: new Date(t).toISOString(),
+      completedAt: new Date(t + base.durationMinutes * 60_000).toISOString(),
+      totalVolumeKg: Math.round(vol),
+      personalRecordsBroken: undefined,
+      notes: undefined,
+      exercises,
+    });
+  }
+  MOCK_HISTORY.push(...extra);
+
+  // Mateo (aluno da demo do Paraguai) ganha um histórico parecido, com cargas um pouco menores
+  const mateo = MOCK_HISTORY.filter((h) => h.studentId === 'student-1').map((h) => ({
+    ...h,
+    id: `${h.id}-py`,
+    studentId: 'student-7',
+    totalVolumeKg: Math.round(h.totalVolumeKg * 0.9),
+    exercises: h.exercises.map((e) => ({
+      ...e,
+      sets: e.sets.map((x) => ({ ...x, weightKg: roundTo(x.weightKg * 0.9) })),
+    })),
+  }));
+  MOCK_HISTORY.push(...mateo);
+})();
+
+// ---------------------------------------------------------------- datas da demo sempre atuais
+// Os dados de exemplo foram escritos com datas fixas. Para a demo não "envelhecer",
+// tudo é deslocado para que o último treino tenha sido ontem.
+(() => {
+  const DAY = 86_400_000;
+  const latest = Math.max(...MOCK_HISTORY.map((h) => Date.parse(h.startedAt)));
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(18, 0, 0, 0);
+  const shiftDays = Math.round((yesterday.getTime() - latest) / DAY);
+  if (!shiftDays) return;
+  const ms = shiftDays * DAY;
+  const iso = (s: string) => new Date(Date.parse(s) + ms).toISOString();
+  const day = (s: string) => {
+    const d = new Date(`${s}T12:00:00`);
+    d.setDate(d.getDate() + shiftDays);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  for (const h of MOCK_HISTORY) {
+    h.startedAt = iso(h.startedAt);
+    h.completedAt = iso(h.completedAt);
+  }
+  for (const w of MOCK_WEIGHT_RECORDS) w.date = day(w.date);
+  for (const p of MOCK_PERSONAL_RECORDS) p.date = p.date.length > 10 ? iso(p.date) : day(p.date);
+  for (const s of MOCK_STUDENTS) {
+    if (s.lastWorkoutDate) s.lastWorkoutDate = day(s.lastWorkoutDate);
+  }
+  for (const r of MOCK_ROUTINES) if (/^\d{4}-\d{2}-\d{2}$/.test(r.updatedAt)) r.updatedAt = day(r.updatedAt);
+})();

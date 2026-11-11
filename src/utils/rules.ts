@@ -1,11 +1,13 @@
-import { SetLog, MuscleGroup, MuscleFatigueScore } from '../types';
+import { SetLog, MuscleGroup, MuscleFatigueScore, WorkoutHistoryEntry } from '../types';
 
 /**
  * Calculates total volume in kg lifted in a workout or exercise
  */
-export function calculateTotalVolume(sets: { weightKg: number; reps: number; completed?: boolean }[]): number {
+export function calculateTotalVolume(
+  sets: { weightKg: number; reps: number; completed?: boolean; type?: string }[]
+): number {
   return sets.reduce((acc, set) => {
-    if (set.completed === false) return acc;
+    if (set.completed === false || set.type === 'warmup') return acc;
     const weight = Number(set.weightKg) || 0;
     const reps = Number(set.reps) || 0;
     return acc + weight * reps;
@@ -146,3 +148,14 @@ export function aggregateMuscleStimulus(
 
   return result;
 }
+
+/** Recalcula volume e séries de um treino editado. */
+export function recount<T extends Omit<WorkoutHistoryEntry, 'id'>>(w: T): T {
+  const sets = w.exercises.flatMap((e) => e.sets);
+  return {
+    ...w,
+    totalVolumeKg: Math.round(calculateTotalVolume(sets)),
+    totalSets: sets.filter((s) => s.completed && s.type !== 'warmup').length,
+  };
+}
+

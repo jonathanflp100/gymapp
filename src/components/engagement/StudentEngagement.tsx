@@ -7,6 +7,18 @@ import { REAL_BACKEND } from '../../services/openGymBackend';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBi, useX } from '../../i18n/extraStrings';
 import { Sheet, useToast } from '../common/ui';
+import { CHECKIN_EVENT } from './CheckinHandler';
+
+/** Recarrega quando um check-in termina (QR lido na recepção). */
+function useCheckinTick(): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const on = () => setN((v) => v + 1);
+    window.addEventListener(CHECKIN_EVENT, on);
+    return () => window.removeEventListener(CHECKIN_EVENT, on);
+  }, []);
+  return n;
+}
 
 const KIND_STYLE: Record<Announcement['kind'], { icon: React.ReactNode; cls: string }> = {
   info: { icon: <Megaphone className="w-4 h-4" />, cls: 'text-sky-300 bg-sky-500/10 border-sky-500/25' },
@@ -79,10 +91,14 @@ export const CheckinCard: React.FC<{ refreshKey?: number }> = ({ refreshKey }) =
   const { language } = useLanguage();
   const [at, setAt] = useState<string | null | undefined>(undefined);
   const [toast, showToast] = useToast();
+  const tick = useCheckinTick();
 
   useEffect(() => {
-    engagement.checkedInToday().then(setAt);
-  }, [refreshKey]);
+    engagement
+      .checkedInToday()
+      .then(setAt)
+      .catch(() => setAt(null));
+  }, [refreshKey, tick]);
 
   if (at === undefined) return null;
   const time = (iso: string) => new Date(iso).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
@@ -129,10 +145,11 @@ export const ChallengesCard: React.FC = () => {
   const x = useX();
   const bi = useBi();
   const [list, setList] = useState<Challenge[]>([]);
+  const tick = useCheckinTick();
 
   useEffect(() => {
     engagement.challenges().then(setList).catch(() => setList([]));
-  }, []);
+  }, [tick]);
 
   if (!list.length) return null;
 

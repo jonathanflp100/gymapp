@@ -18,6 +18,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { generateVapidKeys, sendPush } from './webpush.mjs';
 
 const PORT = Number(process.env.PORT || 4000);
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -29,7 +30,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // ---------------------------------------------------------------- armazenamento
 
-const COLLECTIONS = ['settings', 'members', 'routines', 'classes', 'bookings', 'assessments', 'activity', 'announcements', 'checkins', 'challenges', 'secret', 'inventory'];
+const COLLECTIONS = ['settings', 'members', 'routines', 'classes', 'bookings', 'assessments', 'activity', 'announcements', 'checkins', 'challenges', 'secret', 'inventory', 'photos', 'push'];
 
 const defaults = {
   settings: () => ({
@@ -59,6 +60,10 @@ const defaults = {
   secret: () => ({ key: crypto.randomBytes(32).toString('hex') }),
   // Equipamentos que a academia tem (null = mostrar o catálogo inteiro) e exercícios ocultos
   inventory: () => ({ kits: null, hidden: [] }),
+  // fotos de evolução: só os dados; as imagens ficam em DATA_DIR/fotos/<aluno>/<id>.jpg
+  photos: () => [],
+  // notificações: chaves VAPID e inscrições dos aparelhos
+  push: () => null,
 };
 
 const db = {};
@@ -275,6 +280,24 @@ function cleanSettings(input, current) {
   return out;
 }
 
+// Campos avançados da ficha: tipo, técnica, aquecimento, bi-set, substituto e progressão
+function cleanAdvanced(e) {
+  const out = {};
+  if (['reps', 'time', 'cardio'].includes(e.kind)) out.kind = e.kind;
+  const dur = Number(e.durationSec) > 0 ? num(e.durationSec, 5, 7200) : undefined;
+  if (dur) out.durationSec = dur;
+  if (['normal', 'dropset', 'restpause'].includes(e.technique)) out.technique = e.technique;
+  const wu = num(e.warmupSets, 0, 5);
+  if (wu) out.warmupSets = wu;
+  if (e.groupWithNext === true) out.groupWithNext = true;
+  const alt = str(e.alternativeId, 60);
+  if (alt) out.alternativeId = alt;
+  if (['none', 'linear', 'double'].includes(e.progression)) out.progression = e.progression;
+  const inc = Number(e.incrementKg) > 0 ? num(e.incrementKg, 0.25, 50) : undefined;
+  if (inc) out.incrementKg = inc;
+  return out;
+}
+
 function cleanRoutine(r, member) {
   if (!r || typeof r !== 'object') throw new HttpError(400, 'Ficha inválida');
   const name = str(r.name, 80);
@@ -294,6 +317,7 @@ function cleanRoutine(r, member) {
       targetWeightKg: num(e.targetWeightKg, 0, 1000) ?? 0,
       restSeconds: num(e.restSeconds, 0, 900) ?? 90,
       notes: str(e.notes, 200) || undefined,
+      ...cleanAdvanced(e),
     })),
     createdById: r.createdById || member.id,
     assignedStudentIds: Array.isArray(r.assignedStudentIds) ? r.assignedStudentIds.map(String).slice(0, 2000) : [],
@@ -575,8 +599,7 @@ route('POST', '/api/hub/assessments', ({ member, body }) => {
 });
 
 // resumo dos treinos (o aluno envia ao terminar; o professor acompanha)
-route('POST', '/api/hub/activity', ({ member, body }) => {
-  const entry = {
+const cleanActivity = (body, member) => ({
     id: str(body.id, 60) || id('wk'),
     studentId: member.id,
     routineId: str(body.routineId, 60),
@@ -589,12 +612,27 @@ route('POST', '/api/hub/activity', ({ member, body }) => {
     muscleGroups: Array.isArray(body.muscleGroups) ? body.muscleGroups.slice(0, 12).map(String) : [],
     personalRecordsBroken: Array.isArray(body.personalRecordsBroken) ? body.personalRecordsBroken.slice(0, 20).map(String) : [],
     exercises: Array.isArray(body.exercises) ? body.exercises.slice(0, 40) : [],
-  };
+  ...(body.manual === true ? { manual: true } : {}),
+});
+route('POST', '/api/hub/activity', ({ member, body }) => {
+  const entry = cleanActivity(body, member);
   if (!db.activity.some((a) => a.id === entry.id && a.studentId === member.id)) {
     db.activity.push(entry);
     if (db.activity.length > 200_000) db.activity.splice(0, db.activity.length - 200_000);
     save('activity');
   }
+  return { ok: true };
+});
+route('PUT', '/api/hub/activity/:id', ({ member, params, body }) => {
+  const i = db.activity.findIndex((a) => a.id === params.id && a.studentId === member.id);
+  if (i < 0) throw new HttpError(404, 'Treino não encontrado');
+  db.activity[i] = cleanActivity({ ...body, id: params.id }, member);
+  save('activity');
+  return { ok: true };
+});
+route('DELETE', '/api/hub/activity/:id', ({ member, params }) => {
+  db.activity = db.activity.filter((a) => !(a.id === params.id && a.studentId === member.id));
+  save('activity');
   return { ok: true };
 });
 route('GET', '/api/hub/activity', ({ member, query }) => {
@@ -663,6 +701,63 @@ route('GET', '/api/hub/stats', ({ member }) => {
 });
 
 
+// ---------------------------------------------------------------- relatório do mês (dono e equipe)
+
+route('GET', '/api/hub/report', ({ member, query }) => {
+  if (!isStaff(member)) throw new HttpError(403, 'Sem acesso');
+  const now = new Date();
+  const month = /^\d{4}-\d{2}$/.test(query.get('month') || '') ? query.get('month') : localDay().slice(0, 7);
+  const [y, mo] = month.split('-').map(Number);
+  const start = new Date(y, mo - 1, 1).getTime();
+  const end = Math.min(new Date(y, mo, 1).getTime(), now.getTime() + 86_400_000);
+  const inMonth = (iso) => {
+    const t = Date.parse(iso);
+    return t >= start && t < end;
+  };
+  const students = Object.values(db.members).filter((m) => m.role === 'student');
+  const active = students.filter((m) => m.status === 'active');
+  const acts = db.activity.filter((a) => inMonth(a.completedAt) && db.members[a.studentId]?.role === 'student');
+  const daysBy = new Map();
+  const weekday = [0, 0, 0, 0, 0, 0, 0];
+  for (const a of acts) {
+    const d = localDay(Date.parse(a.completedAt));
+    if (!daysBy.has(a.studentId)) daysBy.set(a.studentId, new Set());
+    daysBy.get(a.studentId).add(d);
+    weekday[new Date(Date.parse(a.completedAt)).getDay()]++;
+  }
+  const week = Date.now() - 7 * 86_400_000;
+  const classCount = new Map();
+  for (const b of db.bookings) if (b.date.startsWith(month)) classCount.set(b.classId, (classCount.get(b.classId) || 0) + 1);
+  const busiest = weekday.indexOf(Math.max(...weekday));
+  return {
+    month,
+    activeStudents: active.length,
+    totalStudents: students.length,
+    newStudents: students.filter((m) => m.joinedAt && inMonth(m.joinedAt)).length,
+    trainedMonth: daysBy.size,
+    totalWorkouts: acts.length,
+    checkins: db.checkins.filter((c) => c.date.startsWith(month)).length,
+    busiestWeekday: acts.length ? busiest : null,
+    topStudents: [...daysBy.entries()]
+      .map(([sid, days]) => ({ name: db.members[sid]?.name || '—', days: days.size }))
+      .sort((a, b) => b.days - a.days)
+      .slice(0, 5),
+    atRisk: active
+      .map((m) => ({ name: m.name, last: memberStats(m.id).lastWorkoutAt }))
+      .filter((x) => !x.last || Date.parse(x.last) < week)
+      .map((x) => ({ name: x.name, days: x.last ? Math.floor((Date.now() - Date.parse(x.last)) / 86_400_000) : null }))
+      .sort((a, b) => (b.days ?? 9999) - (a.days ?? 9999))
+      .slice(0, 10),
+    classes: [...classCount.entries()]
+      .map(([cid, n]) => ({ name: db.classes.find((c) => c.id === cid)?.name ?? '—', bookings: n }))
+      .sort((a, b) => b.bookings - a.bookings)
+      .slice(0, 5),
+    challenges: db.challenges
+      .filter((c) => c.month === month)
+      .map((c) => ({ title: c.title, done: active.filter((m) => challengeProgress(c, m.id) >= c.target).length })),
+  };
+});
+
 // ---------------------------------------------------------------- mural de avisos
 
 route('GET', '/api/hub/announcements', () => {
@@ -688,6 +783,10 @@ route('POST', '/api/hub/announcements', ({ member, body }) => {
   };
   db.announcements.unshift(a);
   save('announcements');
+  // avisa no celular de todos (sem esperar o envio terminar)
+  notify(null, { title: pickName(db.settings.name) || a.title, body: a.body ? `${a.title}: ${a.body}`.slice(0, 180) : a.title, tag: a.id, url: '/' }).catch(
+    () => undefined
+  );
   return a;
 });
 route('DELETE', '/api/hub/announcements/:id', ({ member, params }) => {
@@ -826,6 +925,177 @@ route('DELETE', '/api/hub/challenges/:id', ({ member, params }) => {
   if (!isStaff(member)) throw new HttpError(403, 'Só a equipe apaga desafios');
   db.challenges = db.challenges.filter((c) => c.id !== params.id);
   save('challenges');
+  return { ok: true };
+});
+
+// ---------------------------------------------------------------- Notificações no celular (web push)
+
+const PUSH_TEXT = {
+  'pt-BR': {
+    classSoon: (name, time) => [`Sua aula de ${name} é às ${time}`, 'Sua vaga está reservada. Bom treino!'],
+    idle: (n) => [`Faz ${n} dias que você não treina`, 'Bora voltar? Sua ficha está esperando no app.'],
+    test: ['Tudo certo!', 'Você vai receber os avisos da academia aqui.'],
+  },
+  'es-PY': {
+    classSoon: (name, time) => [`Tu clase de ${name} es a las ${time}`, 'Tu lugar está reservado. ¡Buen entrenamiento!'],
+    idle: (n) => [`Hace ${n} días que no entrenás`, '¿Volvemos? Tu rutina te espera en la app.'],
+    test: ['¡Todo listo!', 'Vas a recibir los avisos del gimnasio acá.'],
+  },
+};
+const pushLang = () => (db.settings.defaultLanguage === 'es-PY' ? 'es-PY' : 'pt-BR');
+const pickName = (n) => (typeof n === 'string' ? n : n?.[pushLang()] || n?.['pt-BR'] || '');
+
+function pushStore() {
+  if (!db.push || !db.push.keys) {
+    db.push = { keys: generateVapidKeys(), subs: [], sent: {} };
+    save('push');
+  }
+  db.push.subs ??= [];
+  db.push.sent ??= {};
+  return db.push;
+}
+
+/** Envia para todos os aparelhos dos membros escolhidos (ou de todos). */
+async function notify(memberIds, data) {
+  const store = pushStore();
+  const targets = store.subs.filter((x) => !memberIds || memberIds.includes(x.memberId));
+  const icon = '/api/hub/icon';
+  const results = await Promise.all(
+    targets.map((sub) => sendPush(sub, { icon, ...data }, store.keys, process.env.PUSH_SUBJECT || 'mailto:suporte@gymapp.local'))
+  );
+  const gone = new Set(targets.filter((_, i) => results[i] === 'gone').map((x) => x.endpoint));
+  if (gone.size) {
+    store.subs = store.subs.filter((x) => !gone.has(x.endpoint));
+    save('push');
+  }
+  return results.filter((r) => r === 'ok').length;
+}
+
+route('GET', '/api/hub/push/key', () => ({ publicKey: pushStore().keys.publicKey }));
+route('POST', '/api/hub/push/subscribe', ({ member, body }) => {
+  const sub = body.subscription || {};
+  const endpoint = str(sub.endpoint, 1000);
+  if (!/^https:\/\//.test(endpoint || '') || !sub.keys?.p256dh || !sub.keys?.auth) throw new HttpError(400, 'Inscrição inválida');
+  const store = pushStore();
+  store.subs = store.subs.filter((x) => x.endpoint !== endpoint);
+  store.subs.push({
+    memberId: member.id,
+    endpoint,
+    keys: { p256dh: str(sub.keys.p256dh, 200), auth: str(sub.keys.auth, 100) },
+    createdAt: new Date().toISOString(),
+  });
+  // limite de aparelhos por pessoa
+  const mine = store.subs.filter((x) => x.memberId === member.id);
+  if (mine.length > 5) store.subs = store.subs.filter((x) => x !== mine[0]);
+  save('push');
+  return { ok: true };
+});
+route('POST', '/api/hub/push/unsubscribe', ({ member, body }) => {
+  const store = pushStore();
+  store.subs = store.subs.filter((x) => !(x.memberId === member.id && x.endpoint === body.endpoint));
+  save('push');
+  return { ok: true };
+});
+route('POST', '/api/hub/push/test', async ({ member }) => {
+  const [title, text] = PUSH_TEXT[pushLang()].test;
+  const sent = await notify([member.id], { title, body: text, tag: 'test' });
+  return { sent };
+});
+
+/** Lembretes automáticos: aula em ~1 hora e aluno sumido (às 18h). Roda a cada 5 minutos. */
+async function pushScheduler() {
+  if (!db.push?.subs?.length) return;
+  const store = pushStore();
+  const now = new Date();
+  const today = localDay();
+  const T = PUSH_TEXT[pushLang()];
+  // limpa marcações de dias anteriores
+  for (const k of Object.keys(store.sent)) if (!k.includes(today)) delete store.sent[k];
+
+  // 1) aula começando entre 45 e 75 minutos
+  for (const o of occurrences(today, null)) {
+    const start = new Date(`${today}T${o.cls.time}:00`).getTime();
+    const mins = (start - now.getTime()) / 60_000;
+    if (mins < 45 || mins > 75) continue;
+    const key = `class:${o.cls.id}:${today}`;
+    if (store.sent[key]) continue;
+    store.sent[key] = 1;
+    const ids = db.bookings.filter((b) => b.classId === o.cls.id && b.date === today).map((b) => b.studentId);
+    if (ids.length) {
+      const [title, text] = T.classSoon(pickName(o.cls.name), o.cls.time);
+      await notify(ids, { title, body: text, tag: key, url: '/' });
+    }
+  }
+
+  // 2) aluno sumido: no 5º, 10º e 20º dia sem treinar, às 18h
+  if (now.getHours() === 18 && !store.sent[`idle:${today}`]) {
+    store.sent[`idle:${today}`] = 1;
+    for (const m of Object.values(db.members)) {
+      if (m.role !== 'student' || m.status !== 'active') continue;
+      const last = memberStats(m.id).lastWorkoutAt;
+      if (!last) continue;
+      const days = Math.floor((Date.now() - Date.parse(last)) / 86_400_000);
+      if ([5, 10, 20].includes(days)) {
+        const [title, text] = T.idle(days);
+        await notify([m.id], { title, body: text, tag: 'idle', url: '/' });
+      }
+    }
+  }
+  save('push');
+}
+setInterval(() => pushScheduler().catch((e) => console.error('push', e)), 5 * 60_000).unref();
+
+// ---------------------------------------------------------------- Fotos de evolução
+
+const PHOTO_DIR = path.join(DATA_DIR, 'fotos');
+const MAX_PHOTOS = 60;
+const photoFile = (p) => path.join(PHOTO_DIR, p.studentId.replace(/[^\w-]/g, '_'), `${p.id}.jpg`);
+const canSeeStudent = (member, studentId) => member.id === studentId || isStaff(member);
+
+route('GET', '/api/hub/photos', ({ member, query }) => {
+  const studentId = query.get('studentId') || member.id;
+  if (!canSeeStudent(member, studentId)) throw new HttpError(403, 'Sem acesso');
+  return db.photos
+    .filter((p) => p.studentId === studentId)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(({ id, date, studentId: sid }) => ({ id, date, studentId: sid, url: `/api/hub/photos/${id}` }));
+});
+route(
+  'GET',
+  '/api/hub/photos/:id',
+  ({ member, params }, req, res) => {
+    const p = db.photos.find((x) => x.id === params.id);
+    if (!p || !canSeeStudent(member, p.studentId)) throw new HttpError(404, 'Foto não encontrada');
+    const buf = fs.readFileSync(photoFile(p));
+    send(res, 200, buf, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=86400' });
+  },
+  { raw: true }
+);
+route('POST', '/api/hub/photos', ({ member, body }) => {
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data || ''));
+  if (!m) throw new HttpError(400, 'Envie a foto em JPEG');
+  const buf = Buffer.from(m[1], 'base64');
+  // confere a assinatura do JPEG (FF D8 FF) para não guardar outro tipo de arquivo
+  if (buf.length < 100 || buf[0] !== 0xff || buf[1] !== 0xd8 || buf[2] !== 0xff) throw new HttpError(400, 'Arquivo de imagem inválido');
+  const mine = db.photos.filter((p) => p.studentId === member.id);
+  if (mine.length >= MAX_PHOTOS) throw new HttpError(400, `Limite de ${MAX_PHOTOS} fotos: apague alguma antiga`);
+  const p = { id: id('ph'), studentId: member.id, date: isDay(body.date) ? body.date : localDay(), createdAt: new Date().toISOString() };
+  fs.mkdirSync(path.dirname(photoFile(p)), { recursive: true });
+  fs.writeFileSync(photoFile(p), buf);
+  db.photos.push(p);
+  save('photos');
+  return { id: p.id, date: p.date, studentId: p.studentId, url: `/api/hub/photos/${p.id}` };
+});
+route('DELETE', '/api/hub/photos/:id', ({ member, params }) => {
+  const p = db.photos.find((x) => x.id === params.id);
+  if (!p || p.studentId !== member.id) throw new HttpError(404, 'Foto não encontrada');
+  try {
+    fs.unlinkSync(photoFile(p));
+  } catch {
+    /* arquivo já não existe */
+  }
+  db.photos = db.photos.filter((x) => x.id !== p.id);
+  save('photos');
   return { ok: true };
 });
 

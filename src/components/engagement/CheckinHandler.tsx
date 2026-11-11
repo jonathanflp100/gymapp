@@ -4,6 +4,7 @@ import { engagement } from '../../services/engagementApi';
 import { useX } from '../../i18n/extraStrings';
 
 export const PENDING_CHECKIN_KEY = 'gymapp.pendingCheckin';
+export const CHECKIN_EVENT = 'gymapp:checkin';
 
 // Lido na carga do app: guarda o código do QR até o aluno entrar e limpa a URL.
 (() => {
@@ -44,7 +45,11 @@ export const CheckinHandler: React.FC<{ onDone?: () => void }> = ({ onDone }) =>
     if (!code) return;
     engagement
       .checkin(code)
-      .then((r) => setResult({ ok: true, text: r.already ? x.engage.chkAlready : x.engage.chkOk }))
+      .then((r) => {
+        setResult({ ok: true, text: r.already ? x.engage.chkAlready : x.engage.chkOk });
+        // avisa os cartões da tela inicial (check-in e desafios) para recarregar
+        window.dispatchEvent(new Event(CHECKIN_EVENT));
+      })
       .catch((e: { status?: number; message?: string }) =>
         setResult({ ok: false, text: e.status === 400 ? x.engage.chkInvalid : `${x.engage.chkError}: ${e.message || e}` })
       )

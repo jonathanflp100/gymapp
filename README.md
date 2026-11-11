@@ -3,6 +3,9 @@
 App (PWA) que o aluno instala no celular, com o nome, a logo e as cores da academia.
 Português (Brasil) e espanhol (Paraguai).
 
+
+> **Site de vendas:** fica na pasta [`site/`](site/README.md), com página de vendas, cadastro da academia e conexão de domínio próprio.
+
 ## O que o produto faz
 
 **Aluno**
@@ -12,6 +15,14 @@ Português (Brasil) e espanhol (Paraguai).
 - Guia de cada exercício: passo a passo, dica, erro comum e animação própria do movimento
 - Check-in pelo **QR code da recepção** (o código muda todo dia), mural de avisos e desafios do mês
 - Registro de peso e meta pelo próprio aluno; lembretes (aula de hoje, dias sem treinar, desafio quase completo)
+- **Treino inteligente**: sugestão de carga (progressão linear ou dupla), séries de aquecimento, bi-set/tri-set,
+  drop set, rest-pause, exercício por tempo (prancha) e cardio; troca de exercício quando a máquina está ocupada
+- Tela acesa durante o treino; treino em andamento salvo no aparelho; sem internet o treino vai para uma fila
+  e é enviado quando a conexão volta (service worker em `public/sw.js`)
+- **Evolução visual**: mapa do corpo (frente e costas), gráfico de carga e 1RM por exercício, calendário do ano,
+  fotos de antes e depois (só o aluno e a equipe veem)
+- Editar um treino já salvo ou registrar um treino feito no papel
+- Notificações no celular: aula em 1 hora, aviso novo no mural, lembrete de quem sumiu (web push com VAPID, sem dependências)
 - Aulas coletivas: grade da semana, reserva e cancelamento, vagas restantes
 - Evolução: cargas, recordes, mapa muscular, histórico
 - Avaliação física: peso, % de gordura, massa magra, medidas, gráfico de evolução
@@ -24,6 +35,9 @@ Português (Brasil) e espanhol (Paraguai).
 - Grade de aulas: criar, excluir, lotação e lista de presença
 - **Equipamentos da academia**: o dono marca o que a academia tem (barras, halteres, polia, aparelhos, smith, kettlebell, TRX...) e oculta exercícios; a biblioteca e a montagem de fichas mostram só o que dá para fazer lá (com opção de abrir o catálogo completo)
 - Registrar avaliações físicas
+- **Modelos de ficha prontos** (Iniciante, ABC, Push/Pull/Legs, Superior/Inferior, ABCD, Circuito) e opções avançadas por exercício
+- Imprimir a ficha ou salvar em PDF com a logo da academia
+- **Relatório do mês** para o dono: ativos, treinos, check-ins, dia mais movimentado, mais assíduos, sumidos, aulas mais cheias e desafios
 - Engajamento: publicar avisos, criar desafios com prêmio, ver quem concluiu, presença do dia e dos últimos 7 dias
 - **Modo recepção**: QR do check-in em tela cheia para TV ou tablet, com contador ao vivo
 
@@ -122,6 +136,9 @@ No PowerShell, use `$env:NOME="valor";` antes de cada comando.
 - `src/views/teacher/SettingsView.tsx`: configurações da academia
 - `src/views/teacher/EngagementView.tsx` e `src/components/engagement/`: avisos, desafios, check-in, peso e lembretes
 - `src/services/catalogue.ts` e `public/catalogo/`: biblioteca de exercícios carregada sob demanda
+- `src/utils/progression.ts`: regra da sugestão de carga · `src/data/routineTemplates.ts`: modelos de ficha
+- `src/services/offline.ts` e `public/sw.js`: uso sem internet · `server/hub/webpush.mjs`: notificações
+- `npm test`: testes de regras, progressão e notificações (inclui o vetor oficial da RFC 8291)
 - `server/hub/`: servidor da academia + Dockerfile
 - `deploy/nginx.conf`: rotas `/api/hub` → hub, `/api` → openGym
 - `deploy/saas/`: Caddy, modelo por academia e scripts

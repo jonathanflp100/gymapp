@@ -14,8 +14,12 @@ import {
   MuscleGroup,
   MuscleFatigueScore,
   Student,
+  WorkoutHistoryEntry,
 } from '../../types';
-import { MuscleMap } from '../../components/muscle/MuscleMap';
+import { MuscleWeekCard } from '../../components/muscle/MuscleWeekCard';
+import { YearHeatmap } from '../../components/charts/YearHeatmap';
+import { ExerciseProgressChart } from '../../components/charts/ExerciseProgressChart';
+import { ProgressPhotos } from '../../components/charts/ProgressPhotos';
 import { EvolutionCharts } from '../../components/charts/EvolutionCharts';
 
 export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'assessment' | 'history' }> = ({ initialTab }) => {
@@ -33,6 +37,7 @@ export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'ass
     null
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [history, setHistory] = useState<WorkoutHistoryEntry[]>([]);
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -40,12 +45,14 @@ export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'ass
     async function loadEvolution() {
       if (!student) return;
       try {
-        const [weights, prs, allExercises, muscleScores] = await Promise.all([
+        const [weights, prs, allExercises, muscleScores, hist] = await Promise.all([
           api.getWeightHistory(student.id),
           api.getPersonalRecords(student.id),
           api.getExercises(),
           api.getWeeklyMuscleStimulus(student.id),
+          api.getWorkoutHistory(student.id).catch(() => [] as WorkoutHistoryEntry[]),
         ]);
+        setHistory(hist);
 
         setWeightHistory(weights);
         setPersonalRecords(prs);
@@ -118,7 +125,10 @@ export const EvolutionView: React.FC<{ initialTab?: 'metrics' | 'muscles' | 'ass
           targetWeightKg={student?.targetWeightKg || 0}
         />
       )}
-      {activeTab === 'muscles' && stimulusData && <MuscleMap stimulusData={stimulusData} />}
+      {activeTab === 'metrics' && <ExerciseProgressChart history={history} exercises={exercises} />}
+      {activeTab === 'metrics' && <YearHeatmap history={history} />}
+      {activeTab === 'metrics' && student && <ProgressPhotos studentId={student.id} />}
+      {activeTab === 'muscles' && stimulusData && <MuscleWeekCard stimulus={stimulusData} />}
       {activeTab === 'assessment' && student && <AssessmentPanel studentId={student.id} />}
       {activeTab === 'history' && <HistoryView embedded />}
     </div>

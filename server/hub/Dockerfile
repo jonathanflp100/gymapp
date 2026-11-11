@@ -1,7 +1,7 @@
 # Servidor da academia (GymApp Hub): sem dependências, só Node.
 FROM node:22-alpine
 WORKDIR /app
-COPY server.mjs ./
+COPY server.mjs webpush.mjs ./
 RUN mkdir -p /data
 ENV PORT=4000 DATA_DIR=/data
 EXPOSE 4000

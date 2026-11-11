@@ -1,6 +1,10 @@
 import { NextClassCard } from '../../components/common/ClassWidgets';
 import { RankingCard } from '../../components/common/RetentionWidgets';
 import { AnnouncementsCard, CheckinCard, ChallengesCard, ReminderBanner } from '../../components/engagement/StudentEngagement';
+import { BodyMap, levelsFromMuscles, useRoutineMuscles } from '../../components/muscle/BodyMap';
+import { usePendingWorkouts } from '../../services/offline';
+import { useX } from '../../i18n/extraStrings';
+import { CloudOff } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Flame, Dumbbell, Clock, ArrowRight, Play, CheckCircle2, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +28,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
   const [todayRoutine, setTodayRoutine] = useState<Routine | null>(null);
   const [recentHistory, setRecentHistory] = useState<WorkoutHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const gx = useX();
+  const pending = usePendingWorkouts();
+  const todayMuscles = useRoutineMuscles(todayRoutine);
 
   useEffect(() => {
     async function loadHomeData() {
@@ -64,6 +71,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
 
   return (
     <div className="space-y-6 pb-28 animate-fadeIn">
+      {pending > 0 && (
+        <div className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/30" role="status">
+          <CloudOff className="w-4 h-4 text-amber-400 shrink-0" />
+          <span className="text-xs font-semibold text-amber-200">{gx.pro.pendingSync(pending)}</span>
+        </div>
+      )}
       {student && <ReminderBanner studentId={student.id} lastWorkoutDate={isLoading ? undefined : recentHistory[0]?.completedAt} streakDays={student.currentStreakDays || 0} />}
       {/* 1. Header Greeting & Streak Flame Banner */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden">
@@ -166,16 +179,24 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
             </div>
           </div>
 
-          {/* Exercises preview pills */}
-          <div className="flex flex-wrap gap-1.5 mb-5">
-            {todayRoutine.targetMuscleGroups.map((mg) => (
-              <span
-                key={mg}
-                className="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 capitalize"
-              >
-                {t(`muscles.${mg}`)}
-              </span>
-            ))}
+          {/* Músculos do treino: mapa do corpo + nomes */}
+          <div className="flex items-center gap-3 mb-5" data-testid="today-bodymap">
+            <div className="shrink-0 rounded-2xl bg-slate-950/60 border border-slate-800 px-2 pt-2 pb-1">
+              <BodyMap levels={levelsFromMuscles(todayMuscles)} height={104} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{gx.pro.bodyToday}</div>
+              <div className="flex flex-wrap gap-1.5">
+                {todayMuscles.map((mg) => (
+                  <span
+                    key={mg}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 capitalize"
+                  >
+                    {t(`muscles.${mg}`)}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Large One-Handed "COMEÇAR TREINO" Button */}
