@@ -43,6 +43,10 @@ services:
       GYM_COLOR: ${GYM_COLOR:-#DC2626}
       GYM_LANG: ${GYM_LANG:-pt-BR}
       GYM_CODE: ${GYM_CODE:-ACADEMIA}
+      # opcional: resumo diário (só números) para o painel administrativo do GymApp
+      ADMIN_SUPABASE_URL: ${ADMIN_SUPABASE_URL:-}
+      ADMIN_SUPABASE_ANON_KEY: ${ADMIN_SUPABASE_ANON_KEY:-}
+      ADMIN_GYM_TOKEN: ${ADMIN_GYM_TOKEN:-}
     volumes:
       - ./data/hub:/data       # BACKUP: marca, equipe, aulas, avaliações
     depends_on:

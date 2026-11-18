@@ -3,6 +3,9 @@
 # Uso: ./scripts/nova-academia.sh <apelido> <dominio> "<Nome da Academia>" [pt-BR|es-PY] [#cor]
 # Ex.: ./scripts/nova-academia.sh titan titan.seuapp.com "Gimnasio Titán" es-PY "#2563EB"
 #
+# Opcional (painel administrativo): defina ADMIN_SUPABASE_URL e ADMIN_SUPABASE_ANON_KEY no
+# ambiente (ou em ../admin.env) e passe ADMIN_GYM_TOKEN=<código da ficha da academia> antes do comando.
+#
 # Antes: aponte o domínio (registro A) para o IP desta VPS.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -18,6 +21,7 @@ COLOR="${5:-#DC2626}"
 TENANT_DIR="$(pwd)/tenants/$SLUG"
 [[ -e "$TENANT_DIR/.env" ]] && { echo "A academia '$SLUG' já existe em $TENANT_DIR"; exit 1; }
 
+[[ -f admin.env ]] && set -a && . ./admin.env && set +a
 TZ_NAME="America/Sao_Paulo"; [[ "$LANG_CODE" == "es-PY" ]] && TZ_NAME="America/Asuncion"
 SETUP_CODE="$(tr -dc 'A-Z0-9' </dev/urandom | head -c 8)"
 GYM_CODE="$(echo "$SLUG" | tr 'a-z' 'A-Z' | tr -cd 'A-Z0-9' | head -c 12)"
@@ -34,6 +38,9 @@ GYM_COLOR=$COLOR
 TZ=$TZ_NAME
 SETUP_CODE=$SETUP_CODE
 CREATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ADMIN_SUPABASE_URL=${ADMIN_SUPABASE_URL:-}
+ADMIN_SUPABASE_ANON_KEY=${ADMIN_SUPABASE_ANON_KEY:-}
+ADMIN_GYM_TOKEN=${ADMIN_GYM_TOKEN:-}
 ENV
 chmod 600 "$TENANT_DIR/.env"
 

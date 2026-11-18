@@ -30,6 +30,9 @@ services:
       GYM_LANG: ${GYM_LANG}
       GYM_CODE: ${GYM_CODE}
       GYM_COLOR: ${GYM_COLOR}
+      ADMIN_SUPABASE_URL: ${ADMIN_SUPABASE_URL:-}
+      ADMIN_SUPABASE_ANON_KEY: ${ADMIN_SUPABASE_ANON_KEY:-}
+      ADMIN_GYM_TOKEN: ${ADMIN_GYM_TOKEN:-}
     volumes:
       - ${TENANT_DIR}/data/hub:/data
     networks: [internal]

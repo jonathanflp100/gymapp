@@ -13,6 +13,7 @@
  *   PORT=4000  DATA_DIR=/data  OPENGYM_URL=http://api:3000
  *   SETUP_CODE=...   código para ativar o administrador (dono) da academia
  *   GYM_NAME, GYM_COLOR, GYM_LANG (pt-BR|es-PY), GYM_CODE   valores iniciais da marca
+ *   ADMIN_SUPABASE_URL, ADMIN_SUPABASE_ANON_KEY, ADMIN_GYM_TOKEN   (opcional) resumo diário para o painel do dono do GymApp
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -1044,6 +1045,43 @@ async function pushScheduler() {
   save('push');
 }
 setInterval(() => pushScheduler().catch((e) => console.error('push', e)), 5 * 60_000).unref();
+
+// ---------------------------------------------------------------- resumo diário para o painel administrativo do GymApp
+// Só números (sem nomes nem dados de alunos). Desligado se as variáveis não existirem.
+
+function adminSummary(now = Date.now()) {
+  const month = now - 30 * 86_400_000;
+  const students = Object.values(db.members).filter((m) => m.role === 'student' && m.status !== 'inactive');
+  const ids = new Set(students.map((m) => m.id));
+  const recent = db.activity.filter((a) => ids.has(a.studentId) && Date.parse(a.completedAt) >= month);
+  const fromDay = localDay(month);
+  return {
+    students: students.length,
+    activeStudents: new Set(recent.map((a) => a.studentId)).size,
+    workouts30d: recent.length,
+    checkins30d: db.checkins.filter((c) => ids.has(c.studentId) && c.date >= fromDay).length,
+    version: '1',
+  };
+}
+
+async function reportToAdmin() {
+  const url = (process.env.ADMIN_SUPABASE_URL || '').replace(/\/$/, '');
+  const key = process.env.ADMIN_SUPABASE_ANON_KEY;
+  const token = process.env.ADMIN_GYM_TOKEN;
+  if (!url || !key || !token) return;
+  const res = await fetch(`${url}/rest/v1/rpc/report_metrics`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ gym_token: token, payload: adminSummary() }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  const ok = res.ok ? await res.json().catch(() => false) : false;
+  if (!ok) console.error('painel admin: resumo recusado', res.status);
+}
+if (process.env.ADMIN_GYM_TOKEN) {
+  setTimeout(() => reportToAdmin().catch((e) => console.error('painel admin', e.message)), 60_000).unref();
+  setInterval(() => reportToAdmin().catch((e) => console.error('painel admin', e.message)), 24 * 3_600_000).unref();
+}
 
 // ---------------------------------------------------------------- Fotos de evolução
 

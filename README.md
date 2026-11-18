@@ -5,6 +5,8 @@ Português (Brasil) e espanhol (Paraguai).
 
 
 > **Site de vendas:** fica na pasta [`site/`](site/README.md), com página de vendas, cadastro da academia e conexão de domínio próprio.
+>
+> **Painel administrativo (só para o dono do GymApp):** fica na pasta [`admin/`](admin/README.md), com visão do Brasil e do Paraguai, financeiro, CRM, assistente de finanças e calculadora de valuation e equity.
 
 ## O que o produto faz
 
@@ -142,6 +144,7 @@ No PowerShell, use `$env:NOME="valor";` antes de cada comando.
 - `server/hub/`: servidor da academia + Dockerfile
 - `deploy/nginx.conf`: rotas `/api/hub` → hub, `/api` → openGym
 - `deploy/saas/`: Caddy, modelo por academia e scripts
+- `site/`: site de vendas · `admin/`: painel administrativo (Supabase em `admin/supabase/schema.sql`)
 
 ## Licenças
 
