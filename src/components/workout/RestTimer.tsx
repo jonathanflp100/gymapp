@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { buzz } from '../common/BrandMotion';
 import { Play, Pause, SkipForward, Plus, Minus, Bell } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
@@ -19,16 +20,27 @@ export const RestTimer: React.FC<RestTimerProps> = ({
   const { t } = useLanguage();
   const { brand } = useBrand();
 
-  const [timeLeft, setTimeLeft] = useState(initialSeconds);
-  const [isRunning, setIsRunning] = useState(true);
+  // O tempo é calculado pelo relógio (horário de término), não por contagem de ticks:
+  // assim não trava quando a tela re-renderiza (o cronômetro do treino atualiza a cada segundo)
+  // e continua certo se o celular bloquear a tela no meio do descanso.
+  const [endAt, setEndAt] = useState(() => Date.now() + initialSeconds * 1000);
+  const [pausedLeft, setPausedLeft] = useState<number | null>(null);
   const [totalTime, setTotalTime] = useState(initialSeconds);
+  const [, setTick] = useState(0);
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
+  const finishedRef = useRef(false);
 
   useEffect(() => {
-    setTimeLeft(initialSeconds);
+    setEndAt(Date.now() + initialSeconds * 1000);
+    setPausedLeft(null);
     setTotalTime(initialSeconds);
-    setIsRunning(true);
-  }, [initialSeconds]);
+    finishedRef.current = false;
+  }, [initialSeconds, isOpen]);
 
+  const isRunning = pausedLeft === null;
+  const msLeft = isRunning ? Math.max(0, endAt - Date.now()) : pausedLeft;
+  const timeLeft = Math.ceil(msLeft / 1000);
   // Audio beep generator using Web Audio API (no external sound file needed)
   const playAlertSound = () => {
     try {
@@ -56,22 +68,19 @@ export const RestTimer: React.FC<RestTimerProps> = ({
   };
 
   useEffect(() => {
-    if (!isOpen || !isRunning || timeLeft <= 0) return;
-
+    if (!isOpen || !isRunning) return;
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          playAlertSound();
-          if (onFinish) onFinish();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
+      setTick((n) => n + 1);
+      if (!finishedRef.current && Date.now() >= endAt) {
+        finishedRef.current = true;
+        playAlertSound();
+        buzz([200, 100, 200]);
+        // mostra "descanso concluído" por um instante antes de fechar
+        setTimeout(() => onFinishRef.current?.(), 1500);
+      }
+    }, 250);
     return () => clearInterval(interval);
-  }, [isOpen, isRunning, timeLeft, onFinish]);
+  }, [isOpen, isRunning, endAt]);
 
   if (!isOpen) return null;
 
@@ -80,13 +89,21 @@ export const RestTimer: React.FC<RestTimerProps> = ({
   const seconds = timeLeft % 60;
   const formattedTime = `${minutes}:${String(seconds).padStart(2, '0')}`;
 
-  const handleAdd15 = () => {
-    setTimeLeft((prev) => prev + 15);
-    setTotalTime((prev) => prev + 15);
+  const shift = (sec: number) => {
+    if (finishedRef.current && sec < 0) return;
+    finishedRef.current = false;
+    if (isRunning) setEndAt((e) => Math.max(Date.now(), e + sec * 1000));
+    else setPausedLeft((p) => Math.max(0, (p ?? 0) + sec * 1000));
+    if (sec > 0) setTotalTime((t) => t + sec);
   };
-
-  const handleMinus15 = () => {
-    setTimeLeft((prev) => Math.max(0, prev - 15));
+  const handleAdd15 = () => shift(15);
+  const handleMinus15 = () => shift(-15);
+  const togglePause = () => {
+    if (isRunning) setPausedLeft(Math.max(0, endAt - Date.now()));
+    else {
+      setEndAt(Date.now() + (pausedLeft ?? 0));
+      setPausedLeft(null);
+    }
   };
 
   return (
@@ -150,7 +167,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
 
           <button
             type="button"
-            onClick={() => setIsRunning(!isRunning)}
+            onClick={togglePause}
             aria-label={isRunning ? 'Pausar descanso' : 'Retomar descanso'}
             className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 active:scale-95 transition"
           >
