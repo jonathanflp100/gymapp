@@ -6,6 +6,7 @@ import { extrasApi, localDay } from '../../services/extrasApi';
 import { REAL_BACKEND } from '../../services/openGymBackend';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBi, useX } from '../../i18n/extraStrings';
+import { CheckinSuccess } from '../common/BrandMotion';
 import { Sheet, useToast } from '../common/ui';
 import { CHECKIN_EVENT } from './CheckinHandler';
 
@@ -91,6 +92,7 @@ export const CheckinCard: React.FC<{ refreshKey?: number }> = ({ refreshKey }) =
   const { language } = useLanguage();
   const [at, setAt] = useState<string | null | undefined>(undefined);
   const [toast, showToast] = useToast();
+  const [done, setDone] = useState<string | null>(null);
   const tick = useCheckinTick();
 
   useEffect(() => {
@@ -125,7 +127,8 @@ export const CheckinCard: React.FC<{ refreshKey?: number }> = ({ refreshKey }) =
                 onClick={async () => {
                   const r = await engagement.checkin('DEMO');
                   setAt(r.at);
-                  showToast(r.already ? x.engage.chkAlready : x.engage.chkOk);
+                  if (r.already) showToast(x.engage.chkAlready);
+                  else setDone(x.engage.chkOk);
                 }}
                 className="mt-2 text-[11px] font-bold text-brand-primary underline underline-offset-2"
               >
@@ -136,6 +139,7 @@ export const CheckinCard: React.FC<{ refreshKey?: number }> = ({ refreshKey }) =
         )}
       </div>
       {toast}
+      {done && <CheckinSuccess text={done} onClose={() => setDone(null)} />}
     </div>
   );
 };

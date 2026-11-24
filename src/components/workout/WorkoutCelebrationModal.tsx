@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
+import { buzz } from '../common/BrandMotion';
 import { Trophy, Flame, Clock, Dumbbell, Award, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
@@ -23,12 +24,14 @@ export const WorkoutCelebrationModal: React.FC<WorkoutCelebrationModalProps> = (
     if (isOpen) {
       // Fire confetti burst
       try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: [brand.primaryColor, brand.accentColor, '#F59E0B', '#10B981', '#FFFFFF'],
-        });
+        const colors = [brand.primaryColor, brand.accentColor, '#F59E0B', '#10B981', '#FFFFFF'];
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors });
+        // segunda rajada, dos dois lados
+        setTimeout(() => {
+          confetti({ particleCount: 45, angle: 60, spread: 55, origin: { x: 0, y: 0.75 }, colors });
+          confetti({ particleCount: 45, angle: 120, spread: 55, origin: { x: 1, y: 0.75 }, colors });
+        }, 350);
+        buzz([40, 60, 40, 60, 120]);
       } catch (e) {
         // Safe fallback
       }
@@ -39,7 +42,7 @@ export const WorkoutCelebrationModal: React.FC<WorkoutCelebrationModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden text-center">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden text-center animate-pop">
         {/* Glow behind badge */}
         <div
           className="absolute -top-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full blur-3xl opacity-30 pointer-events-none"
@@ -47,8 +50,11 @@ export const WorkoutCelebrationModal: React.FC<WorkoutCelebrationModalProps> = (
         />
 
         {/* Celebration Trophy Badge */}
-        <div className="mx-auto w-20 h-20 rounded-3xl flex items-center justify-center mb-4 shadow-xl border border-white/10 relative bg-brand-primary">
-          <Trophy className="w-10 h-10 text-white animate-bounce" />
+        <div className="relative mx-auto w-20 h-20 mb-4">
+          <div className="trophy-rays" />
+          <div className="animate-trophy glow-primary w-20 h-20 rounded-3xl flex items-center justify-center shadow-xl border border-white/10 relative bg-brand-primary">
+            <Trophy className="w-10 h-10 text-white" />
+          </div>
         </div>
 
         <h2 className="text-2xl font-black tracking-tight text-white">

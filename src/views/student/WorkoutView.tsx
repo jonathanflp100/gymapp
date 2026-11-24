@@ -1,4 +1,5 @@
 import { useX } from '../../i18n/extraStrings';
+import { ExerciseThumb } from '../../components/exercise/ExerciseThumb';
 import { ExerciseGuideSheet } from '../../components/exercise/ExerciseGuideSheet';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -505,6 +506,8 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({ initialRoutine, onFini
                   )}
                   <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
                     <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="min-w-0 flex items-start gap-3">
+                        <ExerciseThumb exerciseId={ex.exerciseId} onClick={() => setGuideExerciseId(ex.exerciseId)} />
                       <div className="min-w-0">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                           {t('workout.exerciseIndex', { current: exIndex + 1, total: workoutExercises.length })}
@@ -518,6 +521,7 @@ export const WorkoutView: React.FC<WorkoutViewProps> = ({ initialRoutine, onFini
                             {gx.guide.open}
                           </span>
                         </button>
+                      </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 capitalize">

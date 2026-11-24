@@ -7,6 +7,7 @@ import { useX } from '../../i18n/extraStrings';
 import { CloudOff, Salad, ShoppingBag } from 'lucide-react';
 import { storefrontApi } from '../../services/storefrontApi';
 import React, { useState, useEffect } from 'react';
+import { CountUp } from '../../components/common/BrandMotion';
 import { Flame, Dumbbell, Clock, ArrowRight, Play, CheckCircle2, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBrand } from '../../context/BrandContext';
@@ -79,7 +80,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
       : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
   return (
-    <div className="space-y-6 pb-28 animate-fadeIn">
+    <div className="space-y-6 pb-28 stagger">
       {pending > 0 && (
         <div className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/30" role="status">
           <CloudOff className="w-4 h-4 text-amber-400 shrink-0" />
@@ -110,9 +111,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
 
           {/* Flame streak badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shadow-lg">
-            <Flame className="w-5 h-5 fill-amber-500 text-amber-500 animate-pulse" />
+            <Flame className="w-5 h-5 fill-amber-500 text-amber-500 animate-flame" />
             <div className="text-right">
-              <span className="text-base font-black leading-none">{streakDays}</span>
+              <CountUp value={streakDays} className="text-base font-black leading-none" />
               <span className="block text-[9px] font-bold uppercase tracking-wider text-amber-300">
                 {t('common.streakDays')}
               </span>
@@ -212,7 +213,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
           <button
             type="button"
             onClick={() => onStartWorkout(todayRoutine)}
-            className="w-full py-4 px-6 rounded-2xl bg-brand-primary hover:brightness-110 active:scale-[0.98] font-black text-white text-base tracking-wider shadow-xl flex items-center justify-center gap-3 transition"
+            className="btn-shine glow-primary w-full py-4 px-6 rounded-2xl bg-brand-primary hover:brightness-110 active:scale-[0.98] font-black text-white text-base tracking-wider shadow-xl flex items-center justify-center gap-3 transition"
           >
             <Play className="w-5 h-5 fill-current" />
             <span>{t('home.startWorkoutButton')}</span>

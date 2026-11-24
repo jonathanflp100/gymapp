@@ -1,0 +1,4 @@
+Ilustrações dos exercícios: Exercise data by RepDB (repdb.co) — https://repdb.co
+Plano gratuito (RepDB Free Tier License v1.0): uso pessoal e comercial dentro de aplicativos, com atribuição visível.
+Proibido: republicar/revender estas imagens como dataset, repositório ou API; usar as imagens como entrada ou referência para IA geradora.
+Permitido: redimensionar, recortar e mudar a cor para uso dentro do app.

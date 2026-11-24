@@ -78,3 +78,149 @@ button, a, input, select {
 .safe-top {
   padding-top: max(1rem, env(safe-area-inset-top));
 }
+
+/* ───────────── Movimento e acabamento ───────────── */
+
+body {
+  background-color: #020617;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* brilho suave da cor da academia no topo de todas as telas */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20vh -20vw auto -20vw;
+  height: 60vh;
+  background: radial-gradient(60% 60% at 50% 0%, rgba(var(--brand-primary-rgb), 0.16), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+#root { position: relative; z-index: 1; }
+
+@keyframes gymFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-fadeIn { animation: gymFadeIn 0.38s cubic-bezier(.2,.8,.2,1) backwards; }
+
+/* 'backwards': quando a animação termina não sobra transform, então modais fixos lá dentro continuam cobrindo a tela toda */
+/* filhos entram um depois do outro */
+.stagger > * { animation: gymFadeIn 0.5s cubic-bezier(.2,.8,.2,1) backwards; }
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.17s; }
+.stagger > *:nth-child(5) { animation-delay: 0.22s; }
+.stagger > *:nth-child(6) { animation-delay: 0.27s; }
+.stagger > *:nth-child(7) { animation-delay: 0.32s; }
+.stagger > *:nth-child(n+8) { animation-delay: 0.36s; }
+
+@keyframes gymPop {
+  0% { opacity: 0; transform: scale(.86); }
+  60% { opacity: 1; transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.animate-pop { animation: gymPop 0.45s cubic-bezier(.2,.9,.3,1.2) backwards; }
+
+/* fogo da sequência */
+@keyframes gymFlame {
+  0%, 100% { transform: scale(1) rotate(-3deg); filter: drop-shadow(0 0 4px rgba(245,158,11,.55)); }
+  25% { transform: scale(1.1, 1.16) rotate(2deg); filter: drop-shadow(0 0 9px rgba(245,158,11,.85)); }
+  50% { transform: scale(.96, 1.04) rotate(-1deg); }
+  75% { transform: scale(1.07, 1.1) rotate(3deg); filter: drop-shadow(0 0 7px rgba(239,68,68,.7)); }
+}
+.animate-flame { animation: gymFlame 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
+
+/* brilho que passa pelo botão principal */
+.btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+.btn-shine::after {
+  content: "";
+  position: absolute; inset: 0 auto 0 -60%; width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
+  transform: skewX(-18deg);
+  animation: gymShine 3.6s ease-in-out infinite 1s;
+  pointer-events: none; z-index: 1;
+}
+@keyframes gymShine { 0%, 70% { left: -60%; } 100% { left: 130%; } }
+
+.glow-primary { box-shadow: 0 10px 30px -8px rgba(var(--brand-primary-rgb), .6); }
+.press { transition: transform .15s ease; }
+.press:active { transform: scale(.97); }
+
+/* troféu */
+@keyframes gymTrophy {
+  0% { transform: scale(0) rotate(-25deg); }
+  60% { transform: scale(1.15) rotate(8deg); }
+  80% { transform: scale(.95) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.animate-trophy { animation: gymTrophy .8s cubic-bezier(.2,.9,.3,1.3) backwards .1s; }
+@keyframes gymSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.trophy-rays {
+  position: absolute; left: 50%; top: 50%; width: 190px; height: 190px;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(rgba(var(--brand-primary-rgb), .22) 0 10deg, transparent 10deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 25%, transparent 70%);
+  mask: radial-gradient(circle, #000 25%, transparent 70%);
+  animation: gymSpin 14s linear infinite;
+  pointer-events: none;
+}
+
+/* abertura com a logo */
+.splash-bg {
+  background:
+    radial-gradient(80% 60% at 50% 35%, rgba(var(--brand-primary-rgb), .38), transparent 70%),
+    #020617;
+  animation: gymFade .25s ease both;
+}
+.splash-out { animation: gymFadeOut .45s ease both; }
+@keyframes gymFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gymFadeOut { to { opacity: 0; transform: scale(1.04); } }
+.splash-glow {
+  position: absolute; width: 520px; height: 520px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), .35), transparent 65%);
+  filter: blur(20px); animation: gymBreathe 2.4s ease-in-out infinite;
+}
+@keyframes gymBreathe { 50% { transform: scale(1.12); opacity: .75; } }
+.splash-logo { animation: gymLogo .75s cubic-bezier(.2,.9,.3,1.25) both; box-shadow: 0 20px 60px -10px rgba(var(--brand-primary-rgb), .8); }
+@keyframes gymLogo { from { opacity: 0; transform: scale(.4) rotate(-12deg); } to { opacity: 1; transform: none; } }
+.splash-ring {
+  position: absolute; inset: -6px; border-radius: 34px;
+  border: 2px solid rgba(var(--brand-primary-rgb), .7);
+  animation: gymRing 1.4s ease-out infinite .35s; opacity: 0;
+}
+.splash-ring-2 { animation-delay: .8s; }
+@keyframes gymRing { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.7); } }
+.splash-name { animation: gymFadeIn .5s ease both .3s; }
+.splash-tag { animation: gymFadeIn .5s ease both .45s; }
+.splash-bar { width: 120px; height: 3px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; position: relative; }
+.splash-bar::after { content: ""; position: absolute; inset: 0; background: var(--brand-primary); transform-origin: left; animation: gymBar 1.3s ease-in-out both .2s; }
+@keyframes gymBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* check animado */
+.check-circle { stroke: #10B981; stroke-width: 3; stroke-dasharray: 151; stroke-dashoffset: 151; animation: gymDraw .6s ease-out forwards; }
+.check-mark { stroke: #34D399; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: gymDraw .35s ease-out forwards .5s; }
+@keyframes gymDraw { to { stroke-dashoffset: 0; } }
+.check-burst { position: absolute; inset: 0; border-radius: 50%; background: rgba(16,185,129,.35); animation: gymBurst .8s ease-out both .55s; }
+@keyframes gymBurst { from { transform: scale(.6); opacity: .9; } to { transform: scale(1.8); opacity: 0; } }
+
+/* vitrine da /demo */
+@keyframes gymFloat { 50% { transform: translateY(-8px); } }
+.animate-float { animation: gymFloat 5s ease-in-out infinite; }
+.brand-transition, .brand-transition * { transition: background-color .45s ease, color .45s ease, border-color .45s ease, box-shadow .45s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* ilustração do exercício: início → contração (1,2 s) · segura · volta (1,8 s) · segura */
+@keyframes illusPeak {
+  0%, 8% { opacity: 0; }
+  38%, 50% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}
+.illus-peak { animation: illusPeak 4s ease-in-out infinite; }
+@keyframes illusBreathe { 50% { transform: scale(1.025); } }
+.illus-breathe { animation: illusBreathe 3.2s ease-in-out infinite; }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { engagement } from '../../services/engagementApi';
 import { useX } from '../../i18n/extraStrings';
+import { CheckinSuccess } from '../common/BrandMotion';
 
 export const PENDING_CHECKIN_KEY = 'gymapp.pendingCheckin';
 export const CHECKIN_EVENT = 'gymapp:checkin';
@@ -64,6 +65,7 @@ export const CheckinHandler: React.FC<{ onDone?: () => void }> = ({ onDone }) =>
   }, [result]);
 
   if (!result) return null;
+  if (result.ok) return <CheckinSuccess text={result.text} onClose={() => setResult(null)} />;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" role="alertdialog" onClick={() => setResult(null)}>
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center max-w-xs w-full animate-fadeIn">

@@ -16,7 +16,9 @@ import { useBrand } from '../../context/BrandContext';
 import { useAuth } from '../../context/AuthContext';
 import { REAL_BACKEND } from '../../services/openGymBackend';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { BRAND_PRESETS } from '../../config/brand';
+import { BRAND_PRESETS, generateBrandLogoSvg } from '../../config/brand';
+import { triggerSplash } from '../../components/common/BrandMotion';
+import { LivePhonePreview } from './LivePhonePreview';
 
 interface DemoControlViewProps {
   isOpen: boolean;
@@ -50,6 +52,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
     setCustomAddress(selected.address);
     setCustomCode(selected.gymCode);
 
+    triggerSplash();
     // Switch demo user to match gym country
     if (key === 'forcaTotal') {
       quickLoginAsStudent('student-1'); // Carlos Oliveira
@@ -74,6 +77,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
       gymCode: customCode,
     });
     onClose();
+    triggerSplash();
   };
 
   // Color Swatches for quick live demo
@@ -87,8 +91,9 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-4 backdrop-blur-md overflow-y-auto animate-fadeIn">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl my-6 relative text-white">
+    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/85 p-3 sm:p-4 backdrop-blur-md overflow-y-auto animate-fadeIn">
+      <div className="w-full max-w-4xl bg-slate-900/95 border border-slate-700/80 rounded-3xl shadow-2xl my-6 relative text-white overflow-hidden animate-pop flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className="p-5 sm:p-6 min-w-0">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
@@ -112,7 +117,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
           </button>
         </div>
 
-        <div className="space-y-5 mt-4 max-h-[75vh] overflow-y-auto pr-1">
+        <div className="space-y-5 mt-4 md:max-h-[68vh] md:overflow-y-auto pr-1">
           {/* 1. Presets Selector */}
           <div>
             <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
@@ -124,13 +129,15 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
               <button
                 type="button"
                 onClick={() => handleSelectPreset('forcaTotal')}
-                className={`p-3.5 rounded-2xl border text-left transition flex items-start justify-between ${
+                className={`press p-3.5 rounded-2xl border text-left transition flex items-start justify-between ${
                   activePresetKey === 'forcaTotal'
-                    ? 'bg-slate-950 border-red-500 ring-2 ring-red-500/30'
+                    ? 'bg-gradient-to-br from-red-600/25 to-slate-950 border-red-500 ring-2 ring-red-500/30'
                     : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <div>
+                <div className="flex items-start gap-3">
+                  <img src={generateBrandLogoSvg(BRAND_PRESETS.forcaTotal)} alt="" className="w-11 h-11 rounded-xl shadow-lg shrink-0" />
+                  <div>
                   <div className="flex items-center gap-1.5 font-black text-sm text-white">
                     <span>🇧🇷</span>
                     <span>Força Total</span>
@@ -142,6 +149,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
                     <span className="w-4 h-4 rounded-full bg-[#DC2626] border border-white/20" />
                     <span className="w-4 h-4 rounded-full bg-[#0F172A] border border-white/20" />
                     <span className="text-[10px] text-slate-400 font-mono">FORCA10</span>
+                  </div>
                   </div>
                 </div>
 
@@ -156,13 +164,15 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
               <button
                 type="button"
                 onClick={() => handleSelectPreset('titan')}
-                className={`p-3.5 rounded-2xl border text-left transition flex items-start justify-between ${
+                className={`press p-3.5 rounded-2xl border text-left transition flex items-start justify-between ${
                   activePresetKey === 'titan'
-                    ? 'bg-slate-950 border-blue-500 ring-2 ring-blue-500/30'
+                    ? 'bg-gradient-to-br from-blue-600/25 to-slate-950 border-blue-500 ring-2 ring-blue-500/30'
                     : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <div>
+                <div className="flex items-start gap-3">
+                  <img src={generateBrandLogoSvg(BRAND_PRESETS.titan)} alt="" className="w-11 h-11 rounded-xl shadow-lg shrink-0" />
+                  <div>
                   <div className="flex items-center gap-1.5 font-black text-sm text-white">
                     <span>🇵🇾</span>
                     <span>Gimnasio Titán</span>
@@ -174,6 +184,7 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
                     <span className="w-4 h-4 rounded-full bg-[#2563EB] border border-white/20" />
                     <span className="w-4 h-4 rounded-full bg-[#0F172A] border border-white/20" />
                     <span className="text-[10px] text-slate-400 font-mono">TITAN01</span>
+                  </div>
                   </div>
                 </div>
 
@@ -345,13 +356,34 @@ export const DemoControlView: React.FC<DemoControlViewProps> = ({ isOpen, onClos
             <button
               type="button"
               onClick={handleApplyCustomizations}
-              className="flex-1 py-3 px-4 rounded-2xl bg-brand-primary hover:brightness-110 active:scale-95 text-xs font-bold text-white shadow-xl flex items-center justify-center gap-2 transition"
+              className="btn-shine glow-primary flex-1 py-3 px-4 rounded-2xl bg-brand-primary hover:brightness-110 active:scale-95 text-xs font-bold text-white shadow-xl flex items-center justify-center gap-2 transition"
             >
               <Check className="w-4 h-4" />
               <span>{t('demo.applyAndClose')}</span>
             </button>
           </div>
         </div>
+        </div>
+        {/* Vitrine: celular mostrando o app com a marca, ao vivo */}
+        <div className="order-first relative overflow-hidden px-5 pt-6 pb-5 md:p-8 flex flex-col items-center justify-center brand-transition" style={{ background: `radial-gradient(90% 70% at 50% 20%, ${customPrimary}55, transparent 70%), linear-gradient(180deg, #0B1120, #020617)` }}>
+          <div className="text-center mb-4 md:mb-6 relative z-10">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/70">
+              <Sparkles className="w-3.5 h-3.5" style={{ color: customPrimary }} />
+              {isEs ? 'Así la verán tus alumnos' : 'Assim seus alunos vão ver'}
+            </span>
+            <h3 className="mt-1.5 text-lg md:text-2xl font-black tracking-tight leading-tight">
+              {isEs ? 'La app con la marca de tu gimnasio' : 'O app com a marca da sua academia'}
+            </h3>
+          </div>
+          <LivePhonePreview
+            name={customName}
+            tagline={customTagline}
+            primary={customPrimary}
+            logoUrl={brand.logoUrl || generateBrandLogoSvg({ ...brand, name: customName, primaryColor: customPrimary, secondaryColor: customSecondary })}
+            isEs={isEs}
+          />
+        </div>
+
       </div>
     </div>
   );

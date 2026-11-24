@@ -1,3 +1,5 @@
+import { ExerciseThumb } from '../../components/exercise/ExerciseThumb';
+import { illustrationFor } from '../../data/exerciseIllustrations';
 import { ExerciseGuideSheet } from '../../components/exercise/ExerciseGuideSheet';
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Dumbbell, Filter, X, Check, Save, PlayCircle, EyeOff, Eye, Settings2 } from 'lucide-react';
@@ -225,9 +227,13 @@ export const ExerciseLibraryView: React.FC = () => {
             } ${scope === 'all' && !available(ex, inv) ? 'opacity-50' : ''}`}
           >
             {/* Visual Icon Badge */}
-            <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-brand-primary shrink-0">
-              <Dumbbell className="w-5 h-5" />
-            </div>
+            {illustrationFor(ex.id) ? (
+              <ExerciseThumb exerciseId={ex.id} size={48} />
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-brand-primary shrink-0">
+                <Dumbbell className="w-5 h-5" />
+              </div>
+            )}
 
             <div className="min-w-0 flex-1">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 capitalize block">

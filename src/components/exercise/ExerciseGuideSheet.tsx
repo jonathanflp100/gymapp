@@ -8,6 +8,8 @@ import { useX } from '../../i18n/extraStrings';
 import { useBrand } from '../../context/BrandContext';
 import { EXERCISE_GUIDES } from '../../data/exerciseGuides';
 import { Sheet } from '../common/ui';
+import { illustrationFor, ILLUSTRATION_CREDIT, ILLUSTRATION_CREDIT_URL } from '../../data/exerciseIllustrations';
+import { ExerciseIllustration } from './ExerciseIllustration';
 
 /** Ficha do exercício: vídeo, passo a passo, dica, erro comum e músculos. */
 export const ExerciseGuideSheet: React.FC<{ exercise: Exercise | null; onClose: () => void }> = ({ exercise, onClose }) => {
@@ -128,6 +130,43 @@ const VideoPlayer: React.FC<{ exercise: Exercise }> = ({ exercise }) => {
 
   if (url) {
     return <video src={url} controls playsInline className="w-full aspect-video rounded-2xl bg-black" />;
+  }
+
+  const art = illustrationFor(exercise.id);
+  if (art) {
+    const hold = !art.peak;
+    return (
+      <div>
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-xl" data-testid="exercise-illustration">
+          <ExerciseIllustration art={art} playing={playing} onRep={countRep} />
+          <div className="absolute top-3 left-3 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-950/75 text-white flex items-center gap-1">
+            <Dumbbell className="w-3 h-3" />
+            {x.guide.video}
+          </div>
+          {!hold && (
+            <div className="absolute top-3 right-3 text-[11px] font-black px-2 py-1 rounded-lg text-white tabular-nums" style={{ backgroundColor: brand.primaryColor }}>
+              {reps} reps
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setPlaying((p) => !p)}
+            aria-label={playing ? 'Pausar' : 'Play'}
+            className={`absolute inset-0 flex items-center justify-center ${playing ? 'opacity-0 hover:opacity-100' : ''} transition`}
+          >
+            <span className="w-14 h-14 rounded-full bg-slate-950/85 text-white flex items-center justify-center shadow-2xl">
+              {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+            </span>
+          </button>
+          <div className="absolute bottom-2.5 left-3 right-3 flex">
+            <span className="text-[10.5px] font-bold text-white bg-slate-950/75 rounded-lg px-2 py-1">{hold ? x.guide.hold : x.guide.tempo}</span>
+          </div>
+        </div>
+        <a href={ILLUSTRATION_CREDIT_URL} target="_blank" rel="noopener noreferrer nofollow" className="block mt-1.5 text-right text-[10px] text-slate-500 hover:text-slate-300">
+          {ILLUSTRATION_CREDIT}
+        </a>
+      </div>
+    );
   }
 
   return (

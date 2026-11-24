@@ -21,6 +21,7 @@ import { EngagementView } from './views/teacher/EngagementView';
 import { CheckinHandler, hasPendingCheckin } from './components/engagement/CheckinHandler';
 import { useX } from './i18n/extraStrings';
 import { DemoControlView } from './views/demo/DemoControlView';
+import { BrandSplash } from './components/common/BrandMotion';
 import { LoginView } from './views/auth/LoginView';
 import { RealAuthView } from './views/auth/RealAuthView';
 import { DEFAULT_BRAND } from './config/brand';
@@ -77,6 +78,7 @@ function MainApp() {
       <>
         {hasPendingCheckin() && <PendingCheckinBanner />}
         {REAL_BACKEND ? <RealAuthView /> : <LoginView />}
+        <BrandSplash />
         <DemoControlView isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
       </>
     );
@@ -95,7 +97,7 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-brand-primary selection:text-white">
+    <div className="min-h-screen text-slate-100 flex flex-col selection:bg-brand-primary selection:text-white">
       {/* Check-in pelo QR da recepção (?checkin=CODIGO) */}
       <CheckinHandler onDone={() => role === 'student' && setActiveTab('home')} />
 
@@ -103,7 +105,7 @@ function MainApp() {
       <Header onOpenDemo={() => setIsDemoOpen(true)} onOpenProfile={() => setActiveTab('profile')} onOpenSettings={() => setActiveTab('settings')} />
 
       {/* Main View Area (Mobile-First constrained container) */}
-      <main key={language} className="flex-1 max-w-md w-full mx-auto px-4 pt-4">
+      <main key={`${language}-${activeTab}`} className="flex-1 max-w-md w-full mx-auto px-4 pt-4 animate-fadeIn">
         {/* STUDENT VIEWS */}
         {role === 'student' && (
           <>
@@ -161,6 +163,8 @@ function MainApp() {
           setActiveTab(tab);
         }}
       />
+
+      <BrandSplash />
 
       {/* Hidden /demo Live Tuner & Presets Drawer */}
       <DemoControlView isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
