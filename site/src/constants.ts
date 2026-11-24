@@ -15,7 +15,7 @@ export const PRECO_ASSINATURA_BR = 'R$ 350';
 export const PRECO_LICENCA_BR = 'R$ 17.997';
 
 // Preços Paraguai (es-PY)
-export const PRECO_ASSINATURA_PY = 'Gs. 550.000';
+export const PRECO_ASSINATURA_PY = 'Gs. 400.000';
 export const PRECO_LICENCA_PY = 'Gs. 28.000.000';
 export const CUSTO_SERVIDOR_PY = 'Gs. 50.000 a Gs. 90.000/mes';
 

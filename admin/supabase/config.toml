@@ -1,0 +1,9 @@
+# Configuração mínima para publicar as funções com o Supabase CLI (npx supabase ...).
+project_id = "gymapp-admin"
+
+[functions.stripe-checkout]
+verify_jwt = true
+
+[functions.stripe-webhook]
+# a Stripe não manda login: a segurança é a assinatura do webhook (STRIPE_WEBHOOK_SECRET)
+verify_jwt = false

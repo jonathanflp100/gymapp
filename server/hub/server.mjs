@@ -31,9 +31,10 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // ---------------------------------------------------------------- armazenamento
 
-const COLLECTIONS = ['settings', 'members', 'routines', 'classes', 'bookings', 'assessments', 'activity', 'announcements', 'checkins', 'challenges', 'secret', 'inventory', 'photos', 'push'];
+const COLLECTIONS = ['settings', 'members', 'routines', 'classes', 'bookings', 'assessments', 'activity', 'announcements', 'checkins', 'challenges', 'secret', 'inventory', 'photos', 'push', 'storefront'];
 
 const defaults = {
+  storefront: () => ({ publicPageEnabled: true, shopEnabled: true, about: '', hours: '', gallery: [], plans: [], products: [] }),
   settings: () => ({
     id: 'gym',
     name: process.env.GYM_NAME || 'Minha Academia',
@@ -266,6 +267,12 @@ function cleanSettings(input, current) {
   const code = str(input.gymCode, 16);
   if (code !== undefined) out.gymCode = code.toUpperCase().replace(/[^A-Z0-9]/g, '') || current.gymCode;
   for (const k of ['primaryColor', 'secondaryColor', 'accentColor']) if (isHex(input[k])) out[k] = input[k];
+  // ideias de cardápio e nutricionista parceiro
+  if (typeof input.menusEnabled === 'boolean') out.menusEnabled = input.menusEnabled;
+  const nutriName = str(input.nutritionistName, 80);
+  if (nutriName !== undefined) out.nutritionistName = nutriName;
+  const nutriPhone = str(input.nutritionistWhatsapp, 30);
+  if (nutriPhone !== undefined) out.nutritionistWhatsapp = nutriPhone;
   if (input.defaultLanguage === 'pt-BR' || input.defaultLanguage === 'es-PY') {
     out.defaultLanguage = input.defaultLanguage;
     out.country = input.defaultLanguage === 'es-PY' ? 'PY' : 'BR';
@@ -1082,6 +1089,119 @@ if (process.env.ADMIN_GYM_TOKEN) {
   setTimeout(() => reportToAdmin().catch((e) => console.error('painel admin', e.message)), 60_000).unref();
   setInterval(() => reportToAdmin().catch((e) => console.error('painel admin', e.message)), 24 * 3_600_000).unref();
 }
+
+// ---------------------------------------------------------------- Página pública e vitrine (loja)
+
+const STORE_DIR = path.join(DATA_DIR, 'loja');
+const MAX_STORE_IMAGES = 80;
+const storeImageUrl = (imgId) => `/api/hub/store-images/${imgId}`;
+const storeImageId = (u) => /^\/api\/hub\/store-images\/(img-[\w-]+)$/.exec(String(u || ''))?.[1];
+
+function cleanStorefront(input = {}, prev = defaults.storefront()) {
+  const out = { ...prev };
+  if (typeof input.publicPageEnabled === 'boolean') out.publicPageEnabled = input.publicPageEnabled;
+  if (typeof input.shopEnabled === 'boolean') out.shopEnabled = input.shopEnabled;
+  for (const [k, max] of [['about', 1200], ['hours', 400]]) {
+    const v = str(input[k], max);
+    if (v !== undefined) out[k] = v;
+  }
+  if (Array.isArray(input.gallery)) out.gallery = input.gallery.map(storeImageId).filter(Boolean).slice(0, 8).map(storeImageUrl);
+  if (Array.isArray(input.plans))
+    out.plans = input.plans.slice(0, 8).map((p) => ({
+      id: str(p?.id, 40) || id('plan'),
+      name: str(p?.name, 60) || '',
+      price: str(p?.price, 40) || '',
+      period: str(p?.period, 30) || '',
+      description: str(p?.description, 300) || '',
+      highlight: p?.highlight === true,
+    })).filter((p) => p.name);
+  if (Array.isArray(input.products))
+    out.products = input.products.slice(0, 40).map((p) => ({
+      id: str(p?.id, 40) || id('prod'),
+      name: str(p?.name, 80) || '',
+      price: str(p?.price, 40) || '',
+      category: str(p?.category, 40) || '',
+      description: str(p?.description, 300) || '',
+      imageUrl: storeImageId(p?.imageUrl) ? p.imageUrl : '',
+      available: p?.available !== false,
+    })).filter((p) => p.name);
+  out.updatedAt = new Date().toISOString();
+  return out;
+}
+
+/** Apaga do disco as fotos que não aparecem mais na página nem na loja. */
+function pruneStoreImages(sf) {
+  const used = new Set([...sf.gallery, ...sf.products.map((p) => p.imageUrl)].map(storeImageId).filter(Boolean));
+  if (!fs.existsSync(STORE_DIR)) return;
+  for (const f of fs.readdirSync(STORE_DIR)) {
+    const imgId = f.replace(/\.jpg$/, '');
+    // dá 1 hora de folga para fotos recém-enviadas que ainda não foram salvas na página
+    const age = Date.now() - fs.statSync(path.join(STORE_DIR, f)).mtimeMs;
+    if (!used.has(imgId) && age > 3_600_000) fs.unlinkSync(path.join(STORE_DIR, f));
+  }
+}
+
+// aulas da semana para a página pública (sem nomes de alunos nem reservas)
+const publicClasses = () =>
+  db.classes
+    .filter((c) => !c.archived)
+    .map((c) => ({ id: c.id, name: c.name, weekday: c.weekday, time: c.time, durationMin: c.durationMin, room: c.room, color: c.color, intensity: c.intensity }))
+    .sort((a, b) => a.weekday - b.weekday || a.time.localeCompare(b.time));
+
+route(
+  'GET',
+  '/api/hub/public',
+  () => {
+    const s = db.settings;
+    const sf = db.storefront;
+    return {
+      brand: { name: s.name, tagline: s.tagline, logoUrl: s.logoUrl, primaryColor: s.primaryColor, secondaryColor: s.secondaryColor, defaultLanguage: s.defaultLanguage, whatsapp: s.whatsapp, address: s.address },
+      publicPageEnabled: sf.publicPageEnabled !== false,
+      shopEnabled: sf.shopEnabled !== false,
+      about: sf.about,
+      hours: sf.hours,
+      gallery: sf.gallery,
+      plans: sf.plans,
+      products: sf.products.filter((p) => p.available),
+      classes: publicClasses(),
+    };
+  },
+  { public: true }
+);
+route('GET', '/api/hub/storefront', ({ member }) => {
+  if (member.role !== 'owner') throw new HttpError(403, 'Só o administrador edita a página e a loja');
+  return db.storefront;
+});
+route('PUT', '/api/hub/storefront', ({ member, body }) => {
+  if (member.role !== 'owner') throw new HttpError(403, 'Só o administrador edita a página e a loja');
+  db.storefront = cleanStorefront(body, db.storefront);
+  save('storefront');
+  pruneStoreImages(db.storefront);
+  return db.storefront;
+});
+route('POST', '/api/hub/store-images', ({ member, body }) => {
+  if (member.role !== 'owner') throw new HttpError(403, 'Só o administrador envia fotos da loja');
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data || ''));
+  if (!m) throw new HttpError(400, 'Envie a foto em JPEG');
+  const buf = Buffer.from(m[1], 'base64');
+  if (buf.length < 100 || buf[0] !== 0xff || buf[1] !== 0xd8 || buf[2] !== 0xff) throw new HttpError(400, 'Arquivo de imagem inválido');
+  fs.mkdirSync(STORE_DIR, { recursive: true });
+  if (fs.readdirSync(STORE_DIR).length >= MAX_STORE_IMAGES) throw new HttpError(400, `Limite de ${MAX_STORE_IMAGES} fotos`);
+  const imgId = id('img');
+  fs.writeFileSync(path.join(STORE_DIR, `${imgId}.jpg`), buf);
+  return { url: storeImageUrl(imgId) };
+});
+route(
+  'GET',
+  '/api/hub/store-images/:id',
+  ({ params }, req, res) => {
+    if (!/^img-[\w-]+$/.test(params.id)) throw new HttpError(404, 'Foto não encontrada');
+    const f = path.join(STORE_DIR, `${params.id}.jpg`);
+    if (!fs.existsSync(f)) throw new HttpError(404, 'Foto não encontrada');
+    send(res, 200, fs.readFileSync(f), { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=604800, immutable' });
+  },
+  { public: true, raw: true }
+);
 
 // ---------------------------------------------------------------- Fotos de evolução
 

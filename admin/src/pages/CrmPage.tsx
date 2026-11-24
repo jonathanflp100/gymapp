@@ -58,7 +58,7 @@ export default function CrmPage() {
   const blank = (): Lead => {
     const now = new Date().toISOString();
     const c = scope === 'PY' ? 'PY' : 'BR';
-    return { id: uid(), gymName: '', contactName: '', phone: '', email: '', city: '', country: c, stage: 'lead', plan: 'saas', value: c === 'BR' ? 350 : 550000, source: 'Indicação', students: 0, nextAction: 'Primeiro contato pelo WhatsApp', nextActionDate: today(), createdAt: now, updatedAt: now };
+    return { id: uid(), gymName: '', contactName: '', phone: '', email: '', city: '', country: c, stage: 'lead', plan: 'saas', value: c === 'BR' ? 350 : 400000, source: 'Indicação', students: 0, nextAction: 'Primeiro contato pelo WhatsApp', nextActionDate: today(), createdAt: now, updatedAt: now };
   };
 
   return (
@@ -213,7 +213,7 @@ function LeadSheet({ lead, exists, activities, onClose, onSave, onDelete, onActi
           <Field label="E-mail"><input className="field" type="email" value={l.email} onChange={(e) => set('email', e.target.value)} /></Field>
           <Field label="Cidade"><input className="field" value={l.city} onChange={(e) => set('city', e.target.value)} /></Field>
           <Field label="País">
-            <select className="field" value={l.country} onChange={(e) => { const c = e.target.value as Lead['country']; setL({ ...l, country: c, value: l.plan === 'saas' ? (c === 'BR' ? 350 : 550000) : c === 'BR' ? 17997 : 28000000 }); }}>
+            <select className="field" value={l.country} onChange={(e) => { const c = e.target.value as Lead['country']; setL({ ...l, country: c, value: l.plan === 'saas' ? (c === 'BR' ? 350 : 400000) : c === 'BR' ? 17997 : 28000000 }); }}>
               <option value="BR">🇧🇷 Brasil</option>
               <option value="PY">🇵🇾 Paraguai</option>
             </select>
@@ -229,7 +229,7 @@ function LeadSheet({ lead, exists, activities, onClose, onSave, onDelete, onActi
             </select>
           </Field>
           <Field label="Plano">
-            <select className="field" value={l.plan} onChange={(e) => { const p = e.target.value as Lead['plan']; setL({ ...l, plan: p, value: p === 'saas' ? (l.country === 'BR' ? 350 : 550000) : l.country === 'BR' ? 17997 : 28000000 }); }}>
+            <select className="field" value={l.plan} onChange={(e) => { const p = e.target.value as Lead['plan']; setL({ ...l, plan: p, value: p === 'saas' ? (l.country === 'BR' ? 350 : 400000) : l.country === 'BR' ? 17997 : 28000000 }); }}>
               <option value="saas">Mensal (SaaS)</option>
               <option value="licenca">Licença de uso</option>
             </select>

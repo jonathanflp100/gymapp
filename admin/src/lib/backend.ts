@@ -15,6 +15,8 @@ export interface Backend {
   upsert<T extends Table>(table: T, row: Row<T>): Promise<void>;
   remove(table: Table, id: string): Promise<void>;
   saveSettings(s: Settings): Promise<void>;
+  /** Link de pagamento da Stripe (assinatura mensal) para uma academia. */
+  paymentLink(gymId: string): Promise<string>;
   /** Só no modo demonstração: volta aos dados de exemplo. */
   reset?(): Promise<Db>;
 }
@@ -84,6 +86,9 @@ function demoBackend(): Backend {
     async saveSettings(s) {
       read().settings = { ...s };
       write();
+    },
+    async paymentLink() {
+      throw new Error('No modo demonstração não há cobrança de verdade. Ligue o Supabase e a Stripe (veja o README).');
     },
     async reset() {
       cache = buildSeed();
@@ -171,6 +176,15 @@ function supabaseBackend(url: string, key: string): Backend {
     },
     async saveSettings(s) {
       check(await sb.from('settings').upsert({ id: 1, data: s }));
+    },
+    async paymentLink(gymId) {
+      const { data, error } = await sb.functions.invoke('stripe-checkout', { body: { gymId } });
+      if (error) {
+        const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+        throw new Error(body?.error || 'Não consegui gerar o link. Confira se a função stripe-checkout foi publicada no Supabase.');
+      }
+      if (!data?.url) throw new Error(data?.error || 'A Stripe não devolveu o link.');
+      return data.url as string;
     },
   };
 }

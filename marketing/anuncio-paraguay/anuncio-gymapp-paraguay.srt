@@ -1,0 +1,27 @@
+1
+00:00:00,200 --> 00:00:03,100
+¿Tus alumnos todavía entrenan con ficha de papel?
+
+2
+00:00:03,300 --> 00:00:06,500
+Con GymApp, tu gimnasio tiene su propia app, con tu logo y tus colores.
+
+3
+00:00:06,700 --> 00:00:09,900
+Cada alumno ve su rutina del día, serie por serie, y la app le sugiere la carga.
+
+4
+00:00:10,100 --> 00:00:12,900
+Reservan las clases en un toque, con cupos.
+
+5
+00:00:13,100 --> 00:00:15,900
+Ven su progreso… y no abandonan.
+
+6
+00:00:16,100 --> 00:00:19,500
+Y vos ves quién dejó de venir, y le escribís por WhatsApp.
+
+7
+00:00:19,700 --> 00:00:24,000
+GymApp: todo por 400 mil guaraníes al mes. Pedí tu demo gratis.

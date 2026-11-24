@@ -28,6 +28,9 @@ export interface Gym {
   workouts30d: number;
   checkins30d: number;
   lastReportAt?: string; // ISO
+  // cobrança pela Stripe (preenchido pelo webhook)
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
 }
 
 export type TxType = 'entrada' | 'saida';
@@ -42,6 +45,8 @@ export interface Transaction {
   currency: Currency;
   country: Country | 'GERAL';
   gymId?: string;
+  /** Fatura da Stripe que gerou este lançamento (lançado sozinho pelo webhook). */
+  stripeInvoiceId?: string;
 }
 
 export type LeadStage = 'lead' | 'contato' | 'demo' | 'proposta' | 'negociacao' | 'ganho' | 'perdido';

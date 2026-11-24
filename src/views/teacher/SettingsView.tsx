@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Upload, Trash2, Save, Palette, Phone, Globe, Users, Share2, Copy, Printer, Search, Dumbbell, Image as ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Save, Palette, Phone, Globe, Users, Share2, Copy, Printer, Search, Dumbbell, Salad, Image as ImageIcon } from 'lucide-react';
 import qrcode from 'qrcode-generator';
+import { StorefrontEditor } from '../../components/settings/StorefrontEditor';
 import { BrandConfig } from '../../types';
 import { useBrand } from '../../context/BrandContext';
 import { useAuth } from '../../context/AuthContext';
@@ -18,7 +19,7 @@ const PALETTE = ['#DC2626', '#EA580C', '#D97706', '#16A34A', '#0D9488', '#0284C7
 type Draft = Pick<
   BrandConfig,
   'name' | 'tagline' | 'logoUrl' | 'primaryColor' | 'secondaryColor' | 'whatsapp' | 'address' | 'defaultLanguage' | 'gymCode'
->;
+> & { menusEnabled: boolean; nutritionistName: string; nutritionistWhatsapp: string };
 
 const pick = (b: BrandConfig): Draft => ({
   name: b.name,
@@ -30,6 +31,9 @@ const pick = (b: BrandConfig): Draft => ({
   address: b.address,
   defaultLanguage: b.defaultLanguage,
   gymCode: b.gymCode,
+  menusEnabled: b.menusEnabled !== false,
+  nutritionistName: b.nutritionistName || '',
+  nutritionistWhatsapp: b.nutritionistWhatsapp || '',
 });
 
 /** Lê a imagem, recorta no centro e reduz para 256×256 (logo leve para o servidor). */
@@ -66,7 +70,7 @@ function qrSvg(text: string): string {
 export const SettingsView: React.FC = () => {
   const { brand, saveBrand } = useBrand();
   const { isOwner } = useAuth();
-  const { setLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const x = useX();
   const [toast, showToast] = useToast();
   const [draft, setDraft] = useState<Draft>(() => pick(brand));
@@ -248,6 +252,39 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
       </Section>
+
+      {/* Ideias de cardápio */}
+      <Section
+        icon={<Salad className="w-4 h-4" />}
+        title={language === 'es-PY' ? 'Ideas de menú' : 'Ideias de cardápio'}
+        hint={
+          language === 'es-PY'
+            ? '30 sugerencias generales (ganar masa y bajar de peso) con aviso de que no reemplazan a un nutricionista.'
+            : '30 sugestões gerais (ganhar massa e emagrecer), com aviso de que não substituem um nutricionista.'
+        }
+      >
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-sm text-slate-200">{language === 'es-PY' ? 'Mostrar a los alumnos' : 'Mostrar para os alunos'}</span>
+          <input
+            type="checkbox"
+            className="w-5 h-5 accent-current"
+            style={{ color: brand.primaryColor }}
+            checked={draft.menusEnabled}
+            disabled={!isOwner}
+            onChange={(e) => set('menusEnabled', e.target.checked)}
+          />
+        </label>
+        <label className="block">
+          <span className={label}>{language === 'es-PY' ? 'Nutricionista aliado (opcional)' : 'Nutricionista parceiro (opcional)'}</span>
+          <input className={field} value={draft.nutritionistName} maxLength={80} disabled={!isOwner} placeholder={language === 'es-PY' ? 'Ej.: Lic. María López' : 'Ex.: Dra. Ana Souza'} onChange={(e) => set('nutritionistName', e.target.value)} />
+        </label>
+        <label className="block">
+          <span className={label}>{language === 'es-PY' ? 'WhatsApp del nutricionista' : 'WhatsApp do nutricionista'}</span>
+          <input className={field} value={draft.nutritionistWhatsapp} inputMode="tel" maxLength={30} disabled={!isOwner} placeholder="+595 981 000000" onChange={(e) => set('nutritionistWhatsapp', e.target.value)} />
+        </label>
+      </Section>
+
+      {isOwner && <StorefrontEditor />}
 
       <Section icon={<Dumbbell className="w-4 h-4" />} title={x.inv.title} hint={x.inv.hint}>
         <EquipmentEditor canEdit={isOwner} onSaved={(m) => showToast(m)} />

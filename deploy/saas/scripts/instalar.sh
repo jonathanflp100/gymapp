@@ -20,6 +20,15 @@ echo "==> Subindo o proxy (Caddy, HTTPS automático)"
 mkdir -p sites tenants backups
 docker compose up -d
 
+echo "==> Agendando o backup diário (3h, guarda 14 dias)"
+if command -v crontab >/dev/null; then
+  LINE="0 3 * * * $(pwd)/scripts/backup.sh >> $(pwd)/backups/backup.log 2>&1"
+  (crontab -l 2>/dev/null | grep -v 'saas/scripts/backup.sh' ; echo "$LINE") | crontab -
+  echo "Backup agendado."
+else
+  echo "AVISO: sem cron neste servidor. Instale (sudo apt install cron) e rode este script de novo."
+fi
+
 echo
 echo "Pronto. Crie a primeira academia com:"
 echo "  ./scripts/nova-academia.sh forcatotal app.forcatotal.com.br \"Academia Força Total\" pt-BR"

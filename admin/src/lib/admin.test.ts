@@ -32,16 +32,16 @@ test('MRR converte guaranis pela cotação', () => {
   const db: Db = { ...seed(), transactions: [], leads: [], activities: [] };
   db.gyms = [
     { ...db.gyms[0], country: 'BR', currency: 'BRL', plan: 'saas', monthlyFee: 350, status: 'ativa' },
-    { ...db.gyms[1], country: 'PY', currency: 'PYG', plan: 'saas', monthlyFee: 550000, status: 'ativa' },
+    { ...db.gyms[1], country: 'PY', currency: 'PYG', plan: 'saas', monthlyFee: 400000, status: 'ativa' },
     { ...db.gyms[2], country: 'PY', currency: 'PYG', plan: 'licenca', monthlyFee: 0, status: 'ativa' },
   ];
-  db.settings.fxPygPerBrl = 1100;
+  db.settings.fxPygPerBrl = 1000;
   const k = computeKpis(db, 'ALL', ref);
   assert.equal(k.mrrBR, 350);
-  assert.equal(k.mrrPY, 500);
-  assert.equal(k.mrr, 850);
-  assert.equal(k.arr, 10200);
-  assert.equal(computeKpis(db, 'PY', ref).mrr, 500);
+  assert.equal(k.mrrPY, 400);
+  assert.equal(k.mrr, 750);
+  assert.equal(k.arr, 9000);
+  assert.equal(computeKpis(db, 'PY', ref).mrr, 400);
 });
 
 test('série mensal soma entradas e saídas por país', () => {
@@ -81,10 +81,10 @@ test('resumo para a IA não leva nomes nem telefones', () => {
 });
 
 test('valuation de 1000 academias (500 BR + 500 PY)', () => {
-  const v = valuate({ gymsBR: 500, gymsPY: 500, priceBR: 350, pricePY: 550000, fx: 1171.36, churnMonthly: 0.02, growthYearly: 0.4, margin: 0.35, oneOffYear: 0 });
+  const v = valuate({ gymsBR: 500, gymsPY: 500, priceBR: 350, pricePY: 400000, fx: 1171.36, churnMonthly: 0.02, growthYearly: 0.4, margin: 0.35, oneOffYear: 0 });
   assert.equal(v.mrrBR, 175000);
-  assert.ok(Math.abs(v.mrrPY - 234769) < 1);
-  assert.ok(Math.abs(v.arr - 4_917_229) < 10);
+  assert.ok(Math.abs(v.mrrPY - 170742) < 1);
+  assert.ok(Math.abs(v.arr - 4_148_904) < 10);
   assert.equal(v.adjust.total, 1.1); // crescimento 1 · churn 1 · margem 1.1
   assert.ok(Math.abs(v.scenarios[1].value - v.arr * 4.4) < 1);
   assert.ok(v.scenarios[0].value < v.scenarios[1].value && v.scenarios[1].value < v.scenarios[2].value);

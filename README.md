@@ -80,6 +80,8 @@ docker compose up -d --build
 Depois: abra o endereço → **Criar conta** → **Perfil → Administrador da academia** → digite o `SETUP_CODE`.
 A engrenagem no topo abre as configurações. Coloque HTTPS na frente (Caddy, Nginx Proxy Manager ou Cloudflare).
 
+Backup diário (uma vez só): `./deploy/backup-academia.sh --instalar`. Ele roda todo dia às 3h e guarda 14 dias em `backups/`.
+
 Custo da academia: uma VPS pequena (ex.: Hostinger KVM 1) e um domínio.
 
 ### 3. SaaS (várias academias na sua VPS)
@@ -100,7 +102,7 @@ O script mostra o **código de ativação** do dono. Antes, aponte o domínio (r
 | `listar.sh` | academias e status |
 | `pausar-academia.sh <apelido>` | mensalidade atrasada: tira do ar, guarda os dados |
 | `reativar-academia.sh <apelido>` | volta ao ar |
-| `backup.sh` | backup de tudo (agende no cron, guarda 14 dias) |
+| `backup.sh` | backup de tudo, todo dia às 3h (o `instalar.sh` já agenda; guarda 14 dias) |
 | `atualizar.sh` | depois de `git pull`: faz backup e atualiza todas |
 
 Uma VPS com 2 vCPU e 8 GB (ex.: Hostinger KVM 2) deve comportar dezenas de academias; meça com

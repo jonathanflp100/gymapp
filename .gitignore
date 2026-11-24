@@ -9,3 +9,5 @@ coverage/
 /data/
 .env
 deploy/saas/admin.env
+/backups/
+marketing/anuncio-paraguay/out/

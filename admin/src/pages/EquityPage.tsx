@@ -26,7 +26,7 @@ export default function EquityPage() {
       gymsBR: saas.filter((g) => g.country === 'BR').length,
       gymsPY: saas.filter((g) => g.country === 'PY').length,
       priceBR: 350,
-      pricePY: 550000,
+      pricePY: 400000,
       fx,
       churnMonthly: k.churn3,
       growthYearly: Math.pow(1 + k.growth3, 12) - 1,

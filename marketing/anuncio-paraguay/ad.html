@@ -1,0 +1,133 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #070b16; font-family: 'Inter Display', Inter, sans-serif; color: #fff; }
+  #stage { position: absolute; inset: 0; overflow: hidden;
+    background: radial-gradient(1200px 900px at 50% 30%, #13203d 0%, #070b16 70%); }
+  .glow { position: absolute; width: 1100px; height: 1100px; border-radius: 50%; filter: blur(120px); opacity: .35; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .kicker { position: absolute; left: 0; right: 0; top: 190px; text-align: center; font-size: 34px; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; color: #f87171; }
+  .title { position: absolute; left: 70px; right: 70px; top: 245px; text-align: center; font-size: 84px; line-height: 1.04; font-weight: 800; letter-spacing: -2px; }
+  .title em { font-style: normal; color: #f87171; }
+  .phone { position: absolute; left: 50%; width: 700px; height: 1515px; margin-left: -350px; top: 560px;
+    border-radius: 86px; background: #0b0f1a; padding: 18px; box-shadow: 0 0 0 3px #2a3550, 0 60px 140px rgba(0,0,0,.65), 0 0 120px rgba(57,135,229,.18); }
+  .screen { width: 100%; height: 100%; border-radius: 70px; overflow: hidden; position: relative; background: #0f172a; }
+  .screen img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; transform-origin: 50% 0; }
+  .chip { position: absolute; padding: 22px 34px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 40px; font-weight: 800;
+    box-shadow: 0 20px 60px rgba(220,38,38,.45); white-space: nowrap; }
+  .chip.blue { background: #2563eb; box-shadow: 0 20px 60px rgba(37,99,235,.45); }
+  .chip.green { background: #16a34a; box-shadow: 0 20px 60px rgba(22,163,74,.45); }
+  /* hook */
+  .hook { position: absolute; left: 70px; right: 40px; top: 470px; font-size: 122px; line-height: 1.02; font-weight: 900; letter-spacing: -4px; }
+  .hook > span { display: block; }
+  .paper { position: relative; display: inline-block; }
+  .strike { position: absolute; left: -10px; top: 54%; height: 18px; background: #ef4444; border-radius: 9px; }
+  .sub { position: absolute; left: 70px; right: 70px; top: 1100px; font-size: 66px; font-weight: 800; color: #f87171; }
+  /* cta */
+  .logo { position: absolute; left: 50%; top: 330px; width: 220px; height: 220px; margin-left: -110px; border-radius: 56px; background: #dc2626;
+    display: grid; place-items: center; box-shadow: 0 30px 100px rgba(220,38,38,.5); }
+  .brand { position: absolute; left: 0; right: 0; top: 600px; text-align: center; font-size: 110px; font-weight: 900; letter-spacing: -3px; }
+  .tag { position: absolute; left: 90px; right: 90px; top: 750px; text-align: center; font-size: 54px; line-height: 1.2; font-weight: 600; color: #cbd5e1; }
+  .price { position: absolute; left: 90px; right: 90px; top: 960px; padding: 46px 30px; border-radius: 44px; text-align: center;
+    background: linear-gradient(180deg,#111c33,#0c1426); border: 3px solid #26365a; }
+  .price .lbl { font-size: 36px; color: #94a3b8; font-weight: 600; }
+  .price .val { white-space: nowrap; font-size: 104px; font-weight: 900; letter-spacing: -3px; margin-top: 6px; }
+  .price .val small { font-size: 48px; color: #94a3b8; font-weight: 700; letter-spacing: 0; }
+  .list { position: absolute; left: 150px; right: 150px; top: 1290px; font-size: 42px; font-weight: 600; color: #e2e8f0; line-height: 1.75; }
+  .list b { color: #4ade80; margin-right: 16px; }
+  .btn { position: absolute; left: 140px; right: 140px; top: 1560px; height: 150px; border-radius: 75px; background: #25d366; color: #052e16;
+    display: flex; align-items: center; justify-content: center; gap: 22px; font-size: 52px; font-weight: 900; box-shadow: 0 24px 80px rgba(37,211,102,.4); }
+</style></head>
+<body><div id="stage">
+  <div class="glow" id="g1" style="background:#dc2626; left:-400px; top:-300px"></div>
+  <div class="glow" id="g2" style="background:#2563eb; right:-450px; bottom:-350px"></div>
+
+  <!-- 1. gancho -->
+  <div class="scene" id="s1">
+    <div class="kicker" id="s1k">Dueño de gimnasio</div>
+    <div class="hook">
+      <span id="h1">¿Tus alumnos</span>
+      <span id="h2">todavía entrenan</span>
+      <span id="h3">con ficha</span>
+      <span id="h4">de <span class="paper">papel?<i class="strike" id="strike"></i></span></span>
+    </div>
+    <div class="sub" id="s1sub">Dales una app con la marca de tu gimnasio.</div>
+  </div>
+
+  <!-- 2..6 telas -->
+  <div class="scene" id="sp">
+    <div class="kicker" id="pk"></div>
+    <div class="title" id="pt"></div>
+    <div class="phone" id="phone"><div class="screen"><img id="pimg"></div></div>
+    <div class="chip" id="chip"></div>
+  </div>
+
+  <!-- 7. CTA -->
+  <div class="scene" id="s7">
+    <div class="logo" id="logo"><svg width="130" height="130" viewBox="0 0 32 32"><path d="M8 12v8M24 12v8M11 10v12M21 10v12M11 16h10" stroke="white" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></div>
+    <div class="brand" id="brand">GymApp</div>
+    <div class="tag" id="tag">La app de tu gimnasio,<br>con tu logo y tus colores.</div>
+    <div class="price" id="price"><div class="lbl">Todo incluido</div><div class="val">Gs. 400.000<small> /mes</small></div></div>
+    <div class="list" id="list"><div><b>✓</b>Rutinas, clases y check-in por QR</div><div><b>✓</b>Funciona en cualquier celular</div><div><b>✓</b>Sin descargar de la tienda</div></div>
+    <div class="btn" id="btn"><svg width="62" height="62" viewBox="0 0 24 24" fill="#052e16"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>Pedí tu demo gratis</div>
+  </div>
+</div>
+<script>
+const SCREENS = {
+  home:   { img: 'shots/s_home.png', k: 'Tu marca', t: 'Tu gimnasio <em>en el celular</em> de cada alumno', chip: 'Tu logo · Tus colores', cls: '', cx: 540, cy: 1250, scroll: 380 },
+  rutina: { img: 'shots/w1.png',     k: 'Entrenamiento', t: 'La rutina del día, <em>serie por serie</em>', chip: 'Te sugiere la carga ⚡', cls: 'blue', cx: 540, cy: 1090, scroll: 250 },
+  clases: { img: 'shots/s_nav2.png', k: 'Clases', t: 'Reservas con <em>cupos</em>, sin WhatsApp', chip: 'Reservá en 1 toque', cls: '', cx: 540, cy: 1330, scroll: 300 },
+  prog:   { img: 'shots/s_nav3.png', k: 'Resultados', t: 'Ven su <em>progreso</em> y no abandonan', chip: '−3,5 kg 🔥', cls: 'green', cx: 760, cy: 1190, scroll: 300 },
+  prof:   { img: 'shots/t0.png',     k: 'Para vos', t: 'Ves <em>quién dejó de venir</em> y le escribís', chip: 'Ausentes → WhatsApp', cls: 'green', cx: 540, cy: 1425, scroll: 520 },
+};
+const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
+const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const back = (x) => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const $ = (id) => document.getElementById(id);
+const show = (id) => { for (const s of document.querySelectorAll('.scene')) s.style.display = s.id === id ? 'block' : 'none'; };
+const enter = (el, p, dy = 60) => { el.style.opacity = ease(p); el.style.transform = `translateY(${(1 - ease(p)) * dy}px)`; };
+
+let loaded = {};
+window.prep = async () => {
+  await Promise.all(Object.values(SCREENS).map(s => new Promise(r => { const i = new Image(); i.onload = r; i.src = s.img; loaded[s.img] = i; })));
+  await document.fonts.ready;
+};
+
+// t em segundos dentro da cena; d = duração da cena
+window.frame = (scene, t, d) => {
+  $('g1').style.transform = `translate(${Math.sin(t * .6) * 60}px, ${Math.cos(t * .5) * 40}px)`;
+  $('g2').style.transform = `translate(${Math.cos(t * .5) * 60}px, ${Math.sin(t * .6) * 40}px)`;
+  if (scene === 'hook') {
+    show('s1');
+    enter($('s1k'), t / .4, 30);
+    enter($('h1'), (t - .1) / .45); enter($('h2'), (t - .45) / .45); enter($('h3'), (t - .75) / .45); enter($('h4'), (t - 1.0) / .45);
+    $('strike').style.width = `${clamp((t - 1.6) / .35) * 105}%`;
+    enter($('s1sub'), (t - 2.0) / .5);
+  } else if (scene === 'cta') {
+    show('s7');
+    const s = back(t / .6); $('logo').style.transform = `scale(${s})`; $('logo').style.opacity = clamp(t / .3);
+    enter($('brand'), (t - .2) / .5); enter($('tag'), (t - .4) / .5);
+    enter($('price'), (t - .7) / .5);
+    $('price').style.transform += ` scale(${t > 1.2 ? 1 + .03 * Math.sin((t - 1.2) * 5) : 1})`;
+    enter($('list'), (t - 1.1) / .5);
+    enter($('btn'), (t - 1.5) / .5);
+    if (t > 2) $('btn').style.transform = `scale(${1 + .035 * Math.sin((t - 2) * 6)})`;
+  } else {
+    const S = SCREENS[scene];
+    show('sp');
+    $('pk').textContent = S.k; $('pt').innerHTML = S.t;
+    if ($('pimg').getAttribute('src') !== S.img) $('pimg').setAttribute('src', S.img);
+    enter($('pk'), t / .35, 30); enter($('pt'), (t - .08) / .45, 50);
+    const pe = ease((t - .1) / .7);
+    $('phone').style.transform = `translateY(${(1 - pe) * 700}px) rotate(${(1 - pe) * 4}deg)`;
+    // zoom lento na tela para dar vida
+    $('pimg').style.transform = `scale(${1 + .05 * clamp(t / d)})`;
+    const c = $('chip'); c.className = 'chip ' + S.cls; c.textContent = S.chip;
+    const cp = clamp((t - .9) / .45);
+    c.style.opacity = cp; c.style.left = S.cx + 'px'; c.style.top = S.cy + 'px';
+    c.style.transform = `translate(-50%, -50%) scale(${back(cp)}) rotate(-3deg)`;
+  }
+};
+</script>
+</body></html>

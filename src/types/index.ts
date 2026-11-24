@@ -15,6 +15,11 @@ export interface BrandConfig {
   address: string;
   gymCode: string; // e.g. 'FORCA10' or 'TITAN01'
   country: 'BR' | 'PY';
+  /** Mostra as "Ideias de cardápio" para os alunos (padrão: sim). */
+  menusEnabled?: boolean;
+  /** Nutricionista parceiro da academia (aparece no fim das ideias de cardápio). */
+  nutritionistName?: string;
+  nutritionistWhatsapp?: string;
 }
 
 export type MuscleGroup = 
@@ -273,4 +278,51 @@ export interface MonthReport {
   atRisk: { name: string; days: number | null }[];
   classes: { name: Bilingual | string; bookings: number }[];
   challenges: { title: Bilingual | string; done: number }[];
+}
+
+// ---------------------------------------------------------------- página pública e vitrine
+
+export interface StorePlan {
+  id: string;
+  name: string;
+  /** Texto livre: "Gs. 150.000", "R$ 99,90" */
+  price: string;
+  /** "por mês", "por año", "trimestral"… */
+  period: string;
+  description: string;
+  highlight?: boolean;
+}
+
+export interface StoreProduct {
+  id: string;
+  name: string;
+  price: string;
+  category: string;
+  description: string;
+  imageUrl: string;
+  available: boolean;
+}
+
+export interface Storefront {
+  publicPageEnabled: boolean;
+  shopEnabled: boolean;
+  about: string;
+  hours: string;
+  /** Até 8 fotos da academia */
+  gallery: string[];
+  plans: StorePlan[];
+  products: StoreProduct[];
+}
+
+/** O que a página pública recebe (sem dados de alunos). */
+export interface PublicGym {
+  brand: Pick<BrandConfig, 'name' | 'tagline' | 'logoUrl' | 'primaryColor' | 'secondaryColor' | 'defaultLanguage' | 'whatsapp' | 'address'>;
+  publicPageEnabled: boolean;
+  shopEnabled: boolean;
+  about: string;
+  hours: string;
+  gallery: string[];
+  plans: StorePlan[];
+  products: StoreProduct[];
+  classes: Pick<GroupClass, 'id' | 'name' | 'weekday' | 'time' | 'durationMin' | 'room' | 'color' | 'intensity'>[];
 }

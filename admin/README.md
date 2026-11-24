@@ -3,7 +3,7 @@
 Painel só para o dono do GymApp. Mostra o negócio no Brasil e no Paraguai:
 
 - **Visão geral:** academias ativas, receita recorrente (MRR/ARR), lucro, alunos usando o app, retornos do CRM vencidos e o que o assistente encontrou.
-- **Academias:** lista com situação (teste, ativa, atrasada, cancelada), mensalidade e uso dos últimos 30 dias. Também mostra o código que o servidor de cada academia usa para mandar o resumo diário.
+- **Academias:** lista com situação (teste, ativa, atrasada, cancelada), mensalidade e uso dos últimos 30 dias. Gera o link de pagamento da Stripe e manda pelo WhatsApp. Também mostra o código que o servidor de cada academia usa para mandar o resumo diário.
 - **Financeiro:** entradas e saídas em R$ e Gs. (convertidas para reais), lucro por mês, gastos por categoria e planilha CSV.
 - **CRM:** funil Lead → Contato → Demonstração → Proposta → Negociação → Ganho/Perdido. Dá para arrastar os cartões, registrar o histórico, chamar no WhatsApp e transformar o lead em academia.
 - **Assistente:** nota de saúde do negócio (0–100) por regras de finanças de SaaS (lucro, crescimento, cancelamentos, caixa, uso e cobrança) e um chat opcional com o Gemini.
@@ -64,6 +64,44 @@ O servidor de cada academia (hub) manda, uma vez por dia, só números: alunos, 
 
 No SaaS (`deploy/saas`), coloque URL e chave em `deploy/saas/admin.env` uma vez só e passe o token ao criar a academia:
 `ADMIN_GYM_TOKEN=... ./scripts/nova-academia.sh ...`
+
+## Cobrança automática pela Stripe
+
+Com a Stripe ligada, cada academia recebe um link de pagamento da assinatura mensal (R$ 350 no Brasil, Gs. 400.000 no Paraguai). Depois disso tudo é automático:
+
+- pagou → a academia fica **Ativa** e a entrada aparece no **Financeiro**;
+- o cartão falhou → fica **Pagamento atrasado**;
+- cancelou → fica **Cancelada**.
+
+Taxas da Stripe Brasil: 3,99% + R$ 0,39 por cartão nacional, +2% para cartão estrangeiro e 0,7% do Billing (assinaturas).
+
+**Precisa do Supabase já ligado** (seção acima). Depois:
+
+1. Crie a conta em **stripe.com** (país Brasil, com o seu CPF ou CNPJ e conta bancária em reais). Comece no **modo de teste**.
+2. Stripe → **Desenvolvedores → Chaves de API**: copie a **chave secreta** (`sk_test_...`).
+3. No computador, dentro da pasta do projeto:
+   ```bash
+   cd admin
+   npx supabase login
+   npx supabase link --project-ref SEU_REF          # o REF está na URL do projeto no Supabase
+   npx supabase functions deploy stripe-checkout
+   npx supabase functions deploy stripe-webhook --no-verify-jwt
+   ```
+4. Stripe → **Desenvolvedores → Webhooks → Adicionar destino**:
+   - URL: `https://SEU_REF.supabase.co/functions/v1/stripe-webhook`
+   - Eventos: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
+   - Copie o **segredo de assinatura** (`whsec_...`).
+5. Guarde as chaves no Supabase:
+   ```bash
+   npx supabase secrets set STRIPE_SECRET_KEY=sk_test_... STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+   Opcional: `CHECKOUT_RETURN_URL` (página depois do pagamento; padrão `…/pago.html` do site) e `STRIPE_PY_CURRENCY=brl` (cobrar o Paraguai em reais).
+6. Teste: Academias → abra uma academia → **Gerar link de pagamento** → pague com o cartão de teste `4242 4242 4242 4242` (qualquer data futura e CVC). A academia vira Ativa e a entrada aparece no Financeiro.
+7. Funcionou? Ative a conta na Stripe e troque para as chaves **live** (`sk_live_...` e um novo webhook no modo live) repetindo os passos 4 e 5.
+
+**Paraguai:** o link tenta cobrar em guaranis. Se a conta da Stripe do Brasil não aceitar guarani, ele cobra o valor equivalente em reais pela cotação das Configurações (Gs. 400.000 ≈ R$ 341), e o banco do cliente converte.
+
+Na página `site/public/pago.html`, coloque o seu WhatsApp na variável `WHATSAPP` para aparecer o botão de contato depois do pagamento.
 
 ## Assistente com Gemini (opcional)
 

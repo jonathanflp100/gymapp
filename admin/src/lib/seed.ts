@@ -57,7 +57,7 @@ export function buildSeed(now = new Date()): Db {
       country: p.c,
       plan: p.licenca ? 'licenca' : 'saas',
       status: 'ativa',
-      monthlyFee: p.licenca ? 0 : isBr ? 350 : 550000,
+      monthlyFee: p.licenca ? 0 : isBr ? 350 : 400000,
       currency: isBr ? 'BRL' : 'PYG',
       ownerName: isBr ? BR_PEOPLE[idx % BR_PEOPLE.length] : PY_PEOPLE[idx % PY_PEOPLE.length],
       phone: isBr ? `55879${between(10000000, 99999999)}` : `5959${between(81000000, 99999999)}`,
@@ -124,7 +124,7 @@ export function buildSeed(now = new Date()): Db {
           if (g.country === 'BR') brIncome += v;
           g.country === 'BR' ? (newSalesBr += v * 0.1) : (newSalesPy += v * 0.1);
         } else {
-          g.country === 'BR' ? (newSalesBr += 350) : (newSalesPy += 550000);
+          g.country === 'BR' ? (newSalesBr += 350) : (newSalesPy += 400000);
           if (r() < 0.5) {
             const imp = g.country === 'BR' ? 500 : 800000;
             add({ date: g.startedAt, type: 'entrada', category: 'Implantação', description: `Implantação — ${g.name}`, amount: imp, currency: g.currency, country: g.country, gymId: g.id });
@@ -192,7 +192,7 @@ export function buildSeed(now = new Date()): Db {
       country: c,
       stage,
       plan: licenca ? 'licenca' : 'saas',
-      value: licenca ? (isBr ? 17997 : 28000000) : isBr ? 350 : 550000,
+      value: licenca ? (isBr ? 17997 : 28000000) : isBr ? 350 : 400000,
       source: pick(['Indicação', 'Instagram', 'Meta Ads', 'Site', 'Visita', 'WhatsApp']),
       students: between(60, 500),
       nextAction: nextByStage[stage],

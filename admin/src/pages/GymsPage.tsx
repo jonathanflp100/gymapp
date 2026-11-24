@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Copy, MessageCircle, Plus, Search, Trash2 } from 'lucide-react';
+import { Copy, CreditCard, Link2, MessageCircle, Plus, Search, Trash2 } from 'lucide-react';
+import { backend } from '../lib/backend';
 import { useStore } from '../lib/store';
 import { type Scope } from '../lib/metrics';
 import { fmtDate, fmtMoney, fmtPct, today, uid, waLink } from '../lib/format';
@@ -156,7 +157,7 @@ function GymForm({ gym, onClose, onSave, onDelete, exists }: { gym: Gym; onClose
   const [copied, setCopied] = useState(false);
   const set = <K extends keyof Gym>(k: K, v: Gym[K]) => setG({ ...g, [k]: v });
   const setCountry = (c: Gym['country']) =>
-    setG({ ...g, country: c, currency: c === 'BR' ? 'BRL' : 'PYG', monthlyFee: g.plan === 'saas' ? (c === 'BR' ? 350 : 550000) : 0 });
+    setG({ ...g, country: c, currency: c === 'BR' ? 'BRL' : 'PYG', monthlyFee: g.plan === 'saas' ? (c === 'BR' ? 350 : 400000) : 0 });
   const env = `ADMIN_GYM_TOKEN=${g.token}`;
 
   return (
@@ -189,7 +190,7 @@ function GymForm({ gym, onClose, onSave, onDelete, exists }: { gym: Gym; onClose
         <Field label="Plano">
           <select className="field" value={g.plan} onChange={(e) => {
             const plan = e.target.value as Gym['plan'];
-            setG({ ...g, plan, monthlyFee: plan === 'saas' ? (g.country === 'BR' ? 350 : 550000) : 0 });
+            setG({ ...g, plan, monthlyFee: plan === 'saas' ? (g.country === 'BR' ? 350 : 400000) : 0 });
           }}>
             <option value="saas">Mensal (SaaS)</option>
             <option value="licenca">Licença de uso (pagamento único)</option>
@@ -224,6 +225,8 @@ function GymForm({ gym, onClose, onSave, onDelete, exists }: { gym: Gym; onClose
           )}
         </div>
 
+        {exists && g.plan === 'saas' && <BillingBox gym={g} />}
+
         <div className="sm:col-span-2 flex justify-between gap-2 pt-2">
           {exists ? (
             <button type="button" className="btn btn-ghost text-rose-300" onClick={() => onDelete(g)}><Trash2 size={16} /> Apagar</button>
@@ -244,3 +247,55 @@ const Stat = ({ label, v }: { label: string; v: number }) => (
     <div className="text-slate-100 font-semibold num">{v}</div>
   </div>
 );
+
+/** Cobrança automática: gera o link da Stripe e manda pelo WhatsApp. */
+function BillingBox({ gym }: { gym: Gym }) {
+  const [link, setLink] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [copied, setCopied] = useState(false);
+  const es = gym.country === 'PY';
+  const msg = es
+    ? `¡Hola${gym.ownerName ? ' ' + gym.ownerName.split(' ')[0] : ''}! Este es el link para activar la suscripción mensual de la app de ${gym.name}: ${link}`
+    : `Olá${gym.ownerName ? ' ' + gym.ownerName.split(' ')[0] : ''}! Este é o link para ativar a assinatura mensal do app da ${gym.name}: ${link}`;
+  const generate = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      setLink(await backend.paymentLink(gym.id));
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-semibold text-slate-100 inline-flex items-center gap-1.5"><CreditCard size={16} /> Cobrança automática (Stripe)</div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            {gym.stripeSubscriptionId ? 'Assinatura ligada: os pagamentos entram sozinhos no Financeiro.' : 'Sem assinatura ainda. Gere o link e mande para o dono da academia.'}
+          </div>
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={generate} disabled={busy}>
+          <Link2 size={16} /> {busy ? 'Gerando…' : gym.stripeSubscriptionId ? 'Novo link' : 'Gerar link de pagamento'}
+        </button>
+      </div>
+      {err && <p className="text-xs text-amber-300 mt-2">{err}</p>}
+      {link && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <code className="flex-1 min-w-0 truncate text-xs text-sky-300">{link}</code>
+          <button type="button" className="btn btn-ghost !py-1 !px-2 text-xs" onClick={() => { navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+            <Copy size={14} /> {copied ? 'Copiado' : 'Copiar'}
+          </button>
+          {gym.phone && (
+            <a className="btn btn-ghost !py-1 !px-2 text-xs text-emerald-300" href={waLink(gym.phone, msg)} target="_blank" rel="noreferrer">
+              <MessageCircle size={14} /> Mandar no WhatsApp
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

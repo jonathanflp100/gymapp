@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Backup de todas as academias (contas, treinos, marca, aulas, avaliações).
-# Agende todo dia às 3h:  crontab -e  →  0 3 * * * /caminho/deploy/saas/scripts/backup.sh
+# O instalar.sh já agenda este backup todo dia às 3h (cron).
 # Mantém os últimos 14 dias. Copie a pasta backups/ para fora da VPS (ex.: rclone para o Google Drive).
 set -euo pipefail
 cd "$(dirname "$0")/.."

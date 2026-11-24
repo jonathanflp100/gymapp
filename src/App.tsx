@@ -10,6 +10,9 @@ import { EvolutionView } from './views/student/EvolutionView';
 import { ClassesView } from './views/shared/ClassesView';
 import { SettingsView } from './views/teacher/SettingsView';
 import { ProfileView } from './views/student/ProfileView';
+import { MenusView } from './views/student/MenusView';
+import { ShopView } from './views/student/ShopView';
+import { PublicGymView } from './views/public/PublicGymView';
 import { TeacherDashboard } from './views/teacher/TeacherDashboard';
 import { StudentsView } from './views/teacher/StudentsView';
 import { RoutinesView } from './views/teacher/RoutinesView';
@@ -66,6 +69,9 @@ function MainApp() {
   // Modo completo: espera a marca da academia para não piscar a marca padrão
   if (brandLoading) return <div className="min-h-screen bg-slate-950" aria-busy="true" />;
 
+  // Página pública da academia: aberta, sem login
+  if (typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/academia') return <PublicGymView />;
+
   if (!isAuthenticated) {
     return (
       <>
@@ -117,6 +123,8 @@ function MainApp() {
             {activeTab === 'evolution' && <EvolutionView />}
             {activeTab === 'history' && <EvolutionView initialTab="history" />}
             {activeTab === 'profile' && <ProfileView />}
+            {activeTab === 'menus' && <MenusView onBack={() => setActiveTab('home')} />}
+            {activeTab === 'shop' && <ShopView onBack={() => setActiveTab('home')} />}
           </>
         )}
 

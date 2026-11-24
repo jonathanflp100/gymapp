@@ -4,7 +4,8 @@ import { AnnouncementsCard, CheckinCard, ChallengesCard, ReminderBanner } from '
 import { BodyMap, levelsFromMuscles, useRoutineMuscles } from '../../components/muscle/BodyMap';
 import { usePendingWorkouts } from '../../services/offline';
 import { useX } from '../../i18n/extraStrings';
-import { CloudOff } from 'lucide-react';
+import { CloudOff, Salad, ShoppingBag } from 'lucide-react';
+import { storefrontApi } from '../../services/storefrontApi';
 import React, { useState, useEffect } from 'react';
 import { Flame, Dumbbell, Clock, ArrowRight, Play, CheckCircle2, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -28,6 +29,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
   const [todayRoutine, setTodayRoutine] = useState<Routine | null>(null);
   const [recentHistory, setRecentHistory] = useState<WorkoutHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [shopCount, setShopCount] = useState(0);
+  useEffect(() => {
+    storefrontApi
+      .publicData(brand, language)
+      .then((d) => setShopCount(d.shopEnabled ? d.products.length : 0))
+      .catch(() => setShopCount(0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const gx = useX();
   const pending = usePendingWorkouts();
   const todayMuscles = useRoutineMuscles(todayRoutine);
@@ -231,6 +240,44 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartWorkout, onNavigateTo
 
       {/* Desafios do mês */}
       <ChallengesCard />
+
+      {/* Loja da academia */}
+      {shopCount > 0 && (
+        <button
+          onClick={() => onNavigateToTab('shop')}
+          className="w-full text-left bg-slate-900 border border-slate-800 rounded-3xl p-4 flex items-center gap-3 hover:border-slate-700"
+        >
+          <span className="w-11 h-11 rounded-2xl grid place-items-center shrink-0" style={{ backgroundColor: brand.primaryColor + '22', color: brand.primaryColor }}>
+            <ShoppingBag className="w-5 h-5" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-white">{language === 'es-PY' ? 'Tienda del gimnasio' : 'Loja da academia'}</span>
+            <span className="block text-xs text-slate-400 truncate">
+              {language === 'es-PY' ? `${shopCount} productos · pedí por WhatsApp` : `${shopCount} produtos · peça pelo WhatsApp`}
+            </span>
+          </span>
+          <ArrowRight className="w-4 h-4 text-slate-500" />
+        </button>
+      )}
+
+      {/* Ideias de cardápio */}
+      {brand.menusEnabled !== false && (
+        <button
+          onClick={() => onNavigateToTab('menus')}
+          className="w-full text-left bg-slate-900 border border-slate-800 rounded-3xl p-4 flex items-center gap-3 hover:border-slate-700"
+        >
+          <span className="w-11 h-11 rounded-2xl grid place-items-center shrink-0" style={{ backgroundColor: brand.primaryColor + '22', color: brand.primaryColor }}>
+            <Salad className="w-5 h-5" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-white">{language === 'es-PY' ? 'Ideas de menú' : 'Ideias de cardápio'}</span>
+            <span className="block text-xs text-slate-400 truncate">
+              {language === 'es-PY' ? 'Qué comer de mañana, tarde y noche' : 'O que comer de manhã, de tarde e de noite'}
+            </span>
+          </span>
+          <ArrowRight className="w-4 h-4 text-slate-500" />
+        </button>
+      )}
 
       {/* 3. Quick Stats Grid */}
       <div className="grid grid-cols-2 gap-3">

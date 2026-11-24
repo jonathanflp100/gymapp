@@ -14,7 +14,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useBrand } from '../../context/BrandContext';
 import { useX } from '../../i18n/extraStrings';
 
-export type StudentTab = 'home' | 'workout' | 'classes' | 'evolution' | 'history' | 'profile';
+export type StudentTab = 'home' | 'workout' | 'classes' | 'evolution' | 'history' | 'profile' | 'menus' | 'shop';
 export type TeacherTab = 'dashboard' | 'students' | 'routines' | 'classes' | 'exercises' | 'profile' | 'settings' | 'engage';
 export type ActiveTab = StudentTab | TeacherTab;
 

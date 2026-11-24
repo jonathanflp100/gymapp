@@ -105,6 +105,14 @@ create table if not exists settings (
 );
 insert into settings (id) values (1) on conflict do nothing;
 
+-- ---------------------------------------------------------------- cobrança pela Stripe
+alter table gyms add column if not exists stripe_customer_id text;
+alter table gyms add column if not exists stripe_subscription_id text;
+alter table transactions add column if not exists stripe_invoice_id text;
+create unique index if not exists transactions_stripe_invoice on transactions(stripe_invoice_id);
+create index if not exists gyms_stripe_customer on gyms(stripe_customer_id);
+create index if not exists gyms_stripe_subscription on gyms(stripe_subscription_id);
+
 -- ---------------------------------------------------------------- segurança: só administradores
 alter table admins enable row level security;
 alter table gyms enable row level security;

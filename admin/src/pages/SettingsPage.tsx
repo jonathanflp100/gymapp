@@ -32,7 +32,7 @@ export default function SettingsPage() {
             <Field label="Dinheiro em caixa hoje (R$)"><input className="field num" type="number" min={0} step={100} value={s.cashBrl} onChange={(e) => set('cashBrl', Number(e.target.value))} /></Field>
             <Field label="Modelo do Gemini"><input className="field" value={s.geminiModel} onChange={(e) => set('geminiModel', e.target.value)} /></Field>
             <p className="sm:col-span-2 text-xs text-slate-500">
-              Gs. 550.000 = {fmtBrl(550000 / (s.fxPygPerBrl || 1), true)} com essa cotação. O caixa serve para o assistente calcular quantos meses o dinheiro aguenta se der prejuízo.
+              Gs. 400.000 = {fmtBrl(400000 / (s.fxPygPerBrl || 1), true)} com essa cotação. O caixa serve para o assistente calcular quantos meses o dinheiro aguenta se der prejuízo.
             </p>
             <div className="sm:col-span-2 flex items-center gap-3">
               <button className="btn btn-primary"><Save size={16} /> Salvar</button>

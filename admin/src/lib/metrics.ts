@@ -290,7 +290,7 @@ export function summaryForAi(db: Db, ref = new Date()): string {
   return JSON.stringify({
     data: ref.toISOString().slice(0, 10),
     moeda: 'BRL (guaranis convertidos pela cotação ' + db.settings.fxPygPerBrl + ' PYG por BRL)',
-    precos: { saas_BR: 'R$ 350/mês', saas_PY: 'Gs. 550.000/mês', licenca_BR: 'R$ 17.997', licenca_PY: 'Gs. 28.000.000' },
+    precos: { saas_BR: 'R$ 350/mês', saas_PY: 'Gs. 400.000/mês', licenca_BR: 'R$ 17.997', licenca_PY: 'Gs. 28.000.000' },
     academias: { ativas: k.gymsLive, brasil: k.gymsBR, paraguai: k.gymsPY, em_teste: k.gymsTrial, atrasadas: k.gymsOverdue, canceladas_total: k.gymsCanceled },
     alunos: { total: k.students, ativos_30d: k.activeStudents },
     receita: { mrr: r(k.mrr), mrr_brasil: r(k.mrrBR), mrr_paraguai: r(k.mrrPY), arr: r(k.arr), ticket_medio: r(k.arpa) },

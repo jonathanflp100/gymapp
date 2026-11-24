@@ -230,6 +230,9 @@ const GUEST_NAMES = [
 // ---------------------------------------------------------------- estado
 
 let classes: GroupClass[] = load(KEYS.classes, defaultClasses);
+
+/** Grade semanal do modo demonstração (usada pela página pública). */
+export const demoWeeklyClasses = (): GroupClass[] => [...classes].sort((a, b) => a.weekday - b.weekday || a.time.localeCompare(b.time));
 // v2: troca reservas de exemplo antigas
 let bookings: ClassBooking[] = load(KEYS.bookings + '_v2', () => defaultBookings(classes));
 KEYS.bookings = KEYS.bookings + '_v2';
